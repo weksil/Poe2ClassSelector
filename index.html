@@ -85,6 +85,13 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .nick-actions{display:flex;gap:8px;flex-wrap:wrap}
 .hint{font-size:12px;color:var(--muted);margin-top:8px}
 
+.nodes{margin-top:6px;max-height:min(46vh,420px);overflow:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--gold) transparent}
+.node{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(200,170,110,.15)}
+.node:last-child{border-bottom:0}
+.node img{width:44px;height:44px;flex:none;border-radius:50%;border:2px solid #7a5a22;box-shadow:0 0 0 2px #000,0 0 12px rgba(200,170,110,.25);background:#000}
+.node .nn{font-weight:600;color:var(--gold-2);font-size:14px;line-height:1.25}
+.node .nd{font-size:12.5px;color:var(--text);opacity:.9;margin-top:3px;line-height:1.4;white-space:pre-line}
+.node .nd:empty{display:none}
 footer{position:relative;z-index:2;text-align:center;font-size:12px;color:var(--muted);padding:12px 20px 18px}
 footer a{color:var(--gold);text-decoration:none}
 footer a:hover{text-decoration:underline}
@@ -134,6 +141,11 @@ footer a:hover{text-decoration:underline}
           </div>
         </div>
         <div class="hint" data-i18n="nick_hint">3–23 characters, letters and underscores — fits Path of Exile naming rules.</div>
+        <div id="nodesWrap">
+          <hr>
+          <div class="label"><span data-i18n="nodes">Ascendancy passives</span> <span id="nodeCount"></span></div>
+          <div class="nodes" id="nodes"></div>
+        </div>
       </div>
     </aside>
   </main>
@@ -143,6 +155,7 @@ footer a:hover{text-decoration:underline}
   </footer>
 </div>
 
+<script src="data/nodes.js"></script>
 <script>
 /* ===================== DATA ===================== */
 // Languages exactly as listed in the official pathofexile2.com language switcher.
@@ -455,15 +468,15 @@ const NAMES = {
 
 // UI strings.
 const UI = {
-  en_US:{title:"PoE2 Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org"},
-  ru_RU:{title:"Рулетка подклассов PoE2",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов с официального сайта pathofexile2.com · Арты с poe2db.tw · Случайность от random.org"},
-  de_DE:{title:"PoE2 Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen von der offiziellen Seite pathofexile2.com · Artworks von poe2db.tw · Zufall von random.org"},
-  fr_FR:{title:"Roulette des ascendances PoE2",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes issus du site officiel pathofexile2.com · Illustrations de poe2db.tw · Aléatoire par random.org"},
-  es_ES:{title:"Ruleta de ascendencias PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases del sitio oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedad de random.org"},
-  pt_BR:{title:"Roleta de Ascendências PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes do site oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedade de random.org"},
-  th_TH:{title:"รูเล็ตต์คลาสรอง PoE2",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสจากเว็บไซต์ทางการ pathofexile2.com · ภาพจาก poe2db.tw · การสุ่มจาก random.org"},
-  ja_JP:{title:"PoE2 アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名は公式サイト pathofexile2.com より · アートは poe2db.tw より · 乱数は random.org より"},
-  ko_KR:{title:"PoE2 전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름은 공식 사이트 pathofexile2.com · 아트는 poe2db.tw · 난수는 random.org 제공"}
+  en_US:{nodes:"Ascendancy passives",title:"PoE2 Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org"},
+  ru_RU:{nodes:"Пассивные умения подкласса",title:"Рулетка подклассов PoE2",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов с официального сайта pathofexile2.com · Арты с poe2db.tw · Случайность от random.org"},
+  de_DE:{nodes:"Aufstiegs-Passivfertigkeiten",title:"PoE2 Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen von der offiziellen Seite pathofexile2.com · Artworks von poe2db.tw · Zufall von random.org"},
+  fr_FR:{nodes:"Passifs d'ascendance",title:"Roulette des ascendances PoE2",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes issus du site officiel pathofexile2.com · Illustrations de poe2db.tw · Aléatoire par random.org"},
+  es_ES:{nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases del sitio oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedad de random.org"},
+  pt_BR:{nodes:"Passivas de ascendência",title:"Roleta de Ascendências PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes do site oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedade de random.org"},
+  th_TH:{nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง PoE2",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสจากเว็บไซต์ทางการ pathofexile2.com · ภาพจาก poe2db.tw · การสุ่มจาก random.org"},
+  ja_JP:{nodes:"アセンダンシーパッシブ",title:"PoE2 アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名は公式サイト pathofexile2.com より · アートは poe2db.tw より · 乱数は random.org より"},
+  ko_KR:{nodes:"전직 패시브",title:"PoE2 전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름은 공식 사이트 pathofexile2.com · 아트는 poe2db.tw · 난수는 random.org 제공"}
 };
 
 /* ============ NICKNAME GENERATOR POOLS ============ */
@@ -644,7 +657,23 @@ function swapBackground(c){
   };
   im.src = bgUrl(c);
 }
+function nodeText(n, field){ const v=n[field]; return v[lang] || v.en_US || (field==="n" ? "" : []); }
+function renderNodes(c){
+  const list = NODES.filter(n=>n.a===c.key);
+  $("#nodesWrap").hidden = !list.length;
+  $("#nodeCount").textContent = list.length ? `· ${list.length}` : "";
+  const box=$("#nodes"); box.innerHTML="";
+  list.forEach(n=>{
+    const row=document.createElement("div"); row.className="node";
+    const img=document.createElement("img"); img.src=`assets/nodes/${n.f}`; img.alt=""; img.loading="lazy";
+    const body=document.createElement("div");
+    const nn=document.createElement("div"); nn.className="nn"; nn.textContent=nodeText(n,"n");
+    const nd=document.createElement("div"); nd.className="nd"; nd.textContent=nodeText(n,"d").join("\n");
+    body.append(nn,nd); row.append(img,body); box.appendChild(row);
+  });
+}
 function showResult(c, changeBg){
+  renderNodes(c);
   $("#ascName").textContent = nameOf(c.en);
   $("#chrName").textContent = nameOf(c.base);
   $("#medal").src = `assets/art/${c.key}.webp`;
