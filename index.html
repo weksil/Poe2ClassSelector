@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>PoE2 Ascendancy Roulette</title>
+<title>Ascendancy Roulette</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23120e09' stroke='%23c8aa6e' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23e6cf94'/%3E%3Cpath d='M16 1v30M1 16h30M5.5 5.5l21 21M26.5 5.5l-21 21' stroke='%23c8aa6e' stroke-width='1.5' opacity='.7'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -22,6 +23,7 @@ body{position:relative;overflow-x:hidden}
 /* ---- background layers ---- */
 .bg{position:fixed;inset:0;z-index:0;background:#0b0a09 center/cover no-repeat;opacity:0;transition:opacity 1.2s ease}
 .bg.show{opacity:1}
+.bg.round.show{opacity:.5}   /* Path of Exile only has the round ascendancy medallion: keep it as a faint emblem */
 .bg-default{position:fixed;inset:0;z-index:-1;
   background:radial-gradient(1200px 700px at 50% 20%,#2a2116 0%,#120f0b 55%,#070605 100%)}
 .bg-veil{position:fixed;inset:0;z-index:1;pointer-events:none;
@@ -31,7 +33,16 @@ body{position:relative;overflow-x:hidden}
 .page{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 28px;flex-wrap:wrap}
 h1{font-family:var(--font-head);font-weight:700;letter-spacing:.06em;font-size:clamp(18px,2.4vw,28px);margin:0;color:var(--gold-2);text-shadow:0 2px 12px rgba(0,0,0,.8)}
+.head-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .lang{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
+.games{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:rgba(12,10,8,.85)}
+.game{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;letter-spacing:.02em;
+  padding:9px 16px;cursor:pointer;white-space:nowrap;transition:color .15s,background .15s}
+.game + .game{border-left:1px solid var(--line)}
+.game:hover:not(:disabled){color:var(--text)}
+.game.on{background:linear-gradient(180deg,#5a4520,#2e2210);color:var(--gold-2);font-weight:600}
+.game:disabled{opacity:.55;cursor:progress}
+.game:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
 select{background:rgba(12,10,8,.85);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font:inherit;cursor:pointer}
 select:focus{outline:2px solid var(--gold);outline-offset:1px}
 
@@ -119,10 +130,16 @@ footer a:hover{text-decoration:underline}
 
 <div class="page">
   <header>
-    <h1 data-i18n="title">PoE2 Ascendancy Roulette</h1>
-    <label class="lang"><span data-i18n="language">Language</span>
-      <select id="lang" aria-label="Language"></select>
-    </label>
+    <h1 data-i18n="title">Ascendancy Roulette</h1>
+    <div class="head-right">
+      <div class="games" role="group" aria-label="Game">
+        <button type="button" class="game" data-game="poe2" aria-pressed="true">Path of Exile 2</button>
+        <button type="button" class="game" data-game="poe1" aria-pressed="false">Path of Exile</button>
+      </div>
+      <label class="lang"><span data-i18n="language">Language</span>
+        <select id="lang" aria-label="Language"></select>
+      </label>
+    </div>
   </header>
 
   <main>
@@ -168,7 +185,7 @@ footer a:hover{text-decoration:underline}
   </main>
 
   <footer>
-    <span data-i18n="credits">Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org</span>
+    <span data-i18n="credits">Class names and art from pathofexile2.com, poe2db.tw and poedb.tw · Randomness from random.org</span>
   </footer>
 </div>
 
@@ -182,318 +199,39 @@ const LANGS = [
 ];
 
 // key = asset file name, base = character class, en = official English msgid.
-const CLASSES = [
-  {key:"titan",               base:"Warrior",   en:"Titan"},
-  {key:"warbringer",          base:"Warrior",   en:"Warbringer"},
-  {key:"smith-of-kitava",     base:"Warrior",   en:"Smith of Kitava"},
-  {key:"deadeye",             base:"Ranger",    en:"Deadeye"},
-  {key:"pathfinder",          base:"Ranger",    en:"Pathfinder"},
-  {key:"amazon",              base:"Huntress",  en:"Amazon"},
-  {key:"spirit-walker",       base:"Huntress",  en:"Spirit Walker"},
-  {key:"ritualist",           base:"Huntress",  en:"Ritualist"},
-  {key:"martial-artist",      base:"Monk",      en:"Martial Artist"},
-  {key:"invoker",             base:"Monk",      en:"Invoker"},
-  {key:"acolyte-of-chayula",  base:"Monk",      en:"Acolyte of Chayula"},
-  {key:"infernalist",         base:"Witch",     en:"Infernalist"},
-  {key:"blood-mage",          base:"Witch",     en:"Blood Mage"},
-  {key:"lich",                base:"Witch",     en:"Lich"},
-  {key:"abyssal-lich",        base:"Witch",     en:"Abyssal Lich", noBg:true},
-  {key:"stormweaver",         base:"Sorceress", en:"Stormweaver"},
-  {key:"chronomancer",        base:"Sorceress", en:"Chronomancer"},
-  {key:"disciple-of-varashta",base:"Sorceress", en:"Disciple of Varashta"},
-  {key:"tactician",           base:"Mercenary", en:"Tactician"},
-  {key:"witchhunter",         base:"Mercenary", en:"Witchhunter"},
-  {key:"gemling-legionnaire", base:"Mercenary", en:"Gemling Legionnaire"},
-  {key:"oracle",              base:"Druid",     en:"Oracle"},
-  {key:"shaman",              base:"Druid",     en:"Shaman"}
-];
+// Ascendancy data lives per game in data/poe1.js and data/poe2.js and is fetched on demand.
+const GAME_SRC = {poe2:"data/poe2.js", poe1:"data/poe1.js"};
+const GAMES = {};
+function loadGame(id){
+  if(GAMES[id]) return Promise.resolve(GAMES[id]);
+  return new Promise((res, rej)=>{
+    const sc = document.createElement("script");
+    sc.src = GAME_SRC[id];
+    sc.onload = ()=>{ GAMES[id] = (id==="poe2" ? POE2 : POE1); res(GAMES[id]); };
+    sc.onerror = ()=>rej(new Error("cannot load "+GAME_SRC[id]));
+    document.head.appendChild(sc);
+  });
+}
 
-// Sector colours per character class.
+// Sector colours per character class, both games.
 const BASE_COLORS = {
   Warrior:["#6b2b1f","#4a1c14"], Ranger:["#3d5a2a","#27391a"], Huntress:["#5a6a2a","#3a441a"],
   Monk:["#2c5a5e","#1b393c"], Witch:["#4a2a5e","#2d1a3a"], Sorceress:["#2c3f6e","#1a2645"],
-  Mercenary:["#5c4a22","#3a2e14"], Druid:["#2f5a3e","#1c3826"]
+  Mercenary:["#5c4a22","#3a2e14"], Druid:["#2f5a3e","#1c3826"],
+  Marauder:["#6b2b1f","#4a1c14"], Duelist:["#5c4a22","#3a2e14"], Shadow:["#2c5a5e","#1b393c"],
+  Templar:["#3a3560","#221f3c"], Scion:["#5e3d4a","#3a2530"]
 };
 
-// Official translations, extracted from pathofexile2.com locale dictionaries.
-const NAMES = {
- "pt_BR": {
-  "Witch": "Bruxa",
-  "Ranger": "Caçadora",
-  "Warrior": "Guerreiro",
-  "Sorceress": "Feiticeira",
-  "Mercenary": "Mercenário",
-  "Monk": "Monge",
-  "Huntress": "Caçadora",
-  "Druid": "Druida",
-  "Titan": "Titã",
-  "Warbringer": "Incitador",
-  "Smith of Kitava": "Ferreiro de Kitava",
-  "Deadeye": "Atiradora de Elite",
-  "Pathfinder": "Desbravadora",
-  "Infernalist": "Infernalista",
-  "Blood Mage": "Maga Sangrenta",
-  "Lich": "Lich",
-  "Abyssal Lich": "Lich Abissal",
-  "Stormweaver": "Tempesta",
-  "Chronomancer": "Cronomante",
-  "Disciple of Varashta": "Discípula de Varashta",
-  "Tactician": "Estrategista",
-  "Witchhunter": "Caçador de Bruxas",
-  "Gemling Legionnaire": "Legionário Gemante",
-  "Martial Artist": "Artista Marcial",
-  "Invoker": "Arcanista",
-  "Acolyte of Chayula": "Acólito de Chayula",
-  "Amazon": "Amazon",
-  "Spirit Walker": "Andarilha Espiritual",
-  "Ritualist": "Ritualista",
-  "Oracle": "Oráculo",
-  "Shaman": "Xamã"
- },
- "ru_RU": {
-  "Witch": "Ведьма",
-  "Ranger": "Охотница",
-  "Warrior": "Воин",
-  "Sorceress": "Чародейка",
-  "Mercenary": "Наёмник",
-  "Monk": "Монах",
-  "Huntress": "Копейщица",
-  "Druid": "Друид",
-  "Titan": "Титан",
-  "Warbringer": "Вестник войны",
-  "Smith of Kitava": "Кузнец Китавы",
-  "Deadeye": "Снайпер",
-  "Pathfinder": "Следопыт",
-  "Infernalist": "Инферналист",
-  "Blood Mage": "Маг крови",
-  "Lich": "Лич",
-  "Abyssal Lich": "Лич Бездны",
-  "Stormweaver": "Ткач бурь",
-  "Chronomancer": "Хрономант",
-  "Disciple of Varashta": "Ученица Варашты",
-  "Tactician": "Тактик",
-  "Witchhunter": "Охотник на ведьм",
-  "Gemling Legionnaire": "Легионер каменитов",
-  "Martial Artist": "Мастер боевых искусств",
-  "Invoker": "Заклинатель стихий",
-  "Acolyte of Chayula": "Служитель Чаюлы",
-  "Amazon": "Амазонка",
-  "Spirit Walker": "Ходящая среди духов",
-  "Ritualist": "Ритуалист",
-  "Oracle": "Оракул",
-  "Shaman": "Шаман"
- },
- "th_TH": {
-  "Witch": "Witch",
-  "Ranger": "Ranger",
-  "Warrior": "Warrior",
-  "Sorceress": "Sorceress",
-  "Mercenary": "Mercenary",
-  "Monk": "Monk",
-  "Huntress": "Huntress",
-  "Druid": "Druid",
-  "Titan": "Titan",
-  "Warbringer": "Warbringer",
-  "Smith of Kitava": "Smith of Kitava",
-  "Deadeye": "Deadeye",
-  "Pathfinder": "Pathfinder",
-  "Infernalist": "Infernalist",
-  "Blood Mage": "Blood Mage",
-  "Lich": "Lich",
-  "Abyssal Lich": "Abyssal Lich",
-  "Stormweaver": "Stormweaver",
-  "Chronomancer": "Chronomancer",
-  "Disciple of Varashta": "Disciple of Varashta",
-  "Tactician": "Tactician",
-  "Witchhunter": "Witchhunter",
-  "Gemling Legionnaire": "Gemling Legionnaire",
-  "Martial Artist": "Martial Artist",
-  "Invoker": "Invoker",
-  "Acolyte of Chayula": "Acolyte of Chayula",
-  "Amazon": "Amazon",
-  "Spirit Walker": "Spirit Walker",
-  "Ritualist": "Ritualist",
-  "Oracle": "Oracle",
-  "Shaman": "Shaman"
- },
- "de_DE": {
-  "Witch": "Hexe",
-  "Ranger": "Waldläuferin",
-  "Warrior": "Krieger",
-  "Sorceress": "Zauberin",
-  "Mercenary": "Söldner",
-  "Monk": "Mönch",
-  "Huntress": "Jägerin",
-  "Druid": "Druide",
-  "Titan": "Titan",
-  "Warbringer": "Kriegsbringer",
-  "Smith of Kitava": "Schmied von Kitava",
-  "Deadeye": "Scharfschützin",
-  "Pathfinder": "Pfadfinderin",
-  "Infernalist": "Infernalistin",
-  "Blood Mage": "Blutmagierin",
-  "Lich": "Lich",
-  "Abyssal Lich": "Abgründiger Lich",
-  "Stormweaver": "Sturmweberin",
-  "Chronomancer": "Chronomantin",
-  "Disciple of Varashta": "Jüngerin von Varashta",
-  "Tactician": "Taktiker",
-  "Witchhunter": "Hexenjäger",
-  "Gemling Legionnaire": "Gemmling-Legionär",
-  "Martial Artist": "Meister der Kampfkunst",
-  "Invoker": "Heraufbeschwörer",
-  "Acolyte of Chayula": "Akolyth von Chayula",
-  "Amazon": "Amazone",
-  "Spirit Walker": "Die Geistläuferin",
-  "Ritualist": "Ritualistin",
-  "Oracle": "Orakel",
-  "Shaman": "Schamane"
- },
- "fr_FR": {
-  "Witch": "Sorcière",
-  "Ranger": "Rôdeuse",
-  "Warrior": "Guerrier",
-  "Sorceress": "Magicienne",
-  "Mercenary": "Mercenaire",
-  "Monk": "Moine",
-  "Huntress": "Chasseresse",
-  "Druid": "Druide",
-  "Titan": "Titan",
-  "Warbringer": "Héraut de la guerre",
-  "Smith of Kitava": "Forgeron de Kitava",
-  "Deadeye": "Archère d'élite",
-  "Pathfinder": "Exploratrice",
-  "Infernalist": "Infernaliste",
-  "Blood Mage": "Mage de sang",
-  "Lich": "Liche",
-  "Abyssal Lich": "Liche abyssale",
-  "Stormweaver": "Tisseuse d'orages",
-  "Chronomancer": "Chronomancienne",
-  "Disciple of Varashta": "Disciple de Varashta",
-  "Tactician": "Tacticien",
-  "Witchhunter": "Chasseur de sorcières",
-  "Gemling Legionnaire": "Légionnaire Serti",
-  "Martial Artist": "Artiste martial",
-  "Invoker": "Évocateur",
-  "Acolyte of Chayula": "Acolyte de Chayula",
-  "Amazon": "Amazone",
-  "Spirit Walker": "Marcheuse spirituelle",
-  "Ritualist": "Ritualiste",
-  "Oracle": "Oracle",
-  "Shaman": "Chaman"
- },
- "es_ES": {
-  "Witch": "Bruja",
-  "Ranger": "Exploradora",
-  "Warrior": "Guerrero",
-  "Sorceress": "Hechicera",
-  "Mercenary": "Mercenario",
-  "Monk": "Monje",
-  "Huntress": "Cazadora",
-  "Druid": "Druida",
-  "Titan": "Titán",
-  "Warbringer": "Portador de guerra",
-  "Smith of Kitava": "Herrero de Kitava",
-  "Deadeye": "Tiradora",
-  "Pathfinder": "Rastreadora",
-  "Infernalist": "Infernalista",
-  "Blood Mage": "Maga de sangre",
-  "Lich": "Liche",
-  "Abyssal Lich": "Liche abisal",
-  "Stormweaver": "Tejetormentas",
-  "Chronomancer": "Cronomante",
-  "Disciple of Varashta": "Discípula de Varashta",
-  "Tactician": "Estratega",
-  "Witchhunter": "Cazador de brujas",
-  "Gemling Legionnaire": "Legionario gemita",
-  "Martial Artist": "Artista marcial",
-  "Invoker": "Invocador",
-  "Acolyte of Chayula": "Acólito de Chayula",
-  "Amazon": "Amazona",
-  "Spirit Walker": "Caminante espiritual",
-  "Ritualist": "Ritualista",
-  "Oracle": "Oráculo",
-  "Shaman": "Chamán"
- },
- "ja_JP": {
-  "Witch": "ウィッチ",
-  "Ranger": "レンジャー",
-  "Warrior": "ウォーリアー",
-  "Sorceress": "ソーサレス",
-  "Mercenary": "マーセナリー",
-  "Monk": "モンク",
-  "Huntress": "ハントレス",
-  "Druid": "ドルイド",
-  "Titan": "タイタン",
-  "Warbringer": "ウォーブリンガー",
-  "Smith of Kitava": "スミスオブキタヴァ",
-  "Deadeye": "デッドアイ",
-  "Pathfinder": "パスファインダー",
-  "Infernalist": "インファーナリスト",
-  "Blood Mage": "ブラッドメイジ",
-  "Lich": "リッチ",
-  "Abyssal Lich": "アビサルリッチ",
-  "Stormweaver": "ストームウィーバー",
-  "Chronomancer": "クロノマンサー",
-  "Disciple of Varashta": "ディサイプルオブヴァラシュタ",
-  "Tactician": "タクティシャン",
-  "Witchhunter": "ウィッチハンター",
-  "Gemling Legionnaire": "ジェムリングリージョネア",
-  "Martial Artist": "マーシャルアーティスト",
-  "Invoker": "インヴォーカー",
-  "Acolyte of Chayula": "アコライトオブチャユラ",
-  "Amazon": "アマゾン",
-  "Spirit Walker": "スピリットウォーカー",
-  "Ritualist": "リチュアリスト",
-  "Oracle": "オラクル",
-  "Shaman": "シャーマン"
- },
- "ko_KR": {
-  "Witch": "위치",
-  "Ranger": "레인저",
-  "Warrior": "워리어",
-  "Sorceress": "소서리스",
-  "Mercenary": "용병",
-  "Monk": "몽크",
-  "Huntress": "헌트리스",
-  "Druid": "드루이드",
-  "Titan": "타이탄",
-  "Warbringer": "워브링어",
-  "Smith of Kitava": "스미스 오브 키타바",
-  "Deadeye": "데드아이",
-  "Pathfinder": "패스파인더",
-  "Infernalist": "인퍼널리스트",
-  "Blood Mage": "블러드 메이지",
-  "Lich": "리치",
-  "Abyssal Lich": "심연의 리치",
-  "Stormweaver": "스톰위버",
-  "Chronomancer": "크로노맨서",
-  "Disciple of Varashta": "디사이플 오브 바라시타",
-  "Tactician": "택티션",
-  "Witchhunter": "위치헌터",
-  "Gemling Legionnaire": "젬링 리저네어",
-  "Martial Artist": "마셜 아티스트",
-  "Invoker": "인보커",
-  "Acolyte of Chayula": "애컬라이트 오브 차율라",
-  "Amazon": "아마존",
-  "Spirit Walker": "스피릿 워커",
-  "Ritualist": "리추얼리스트",
-  "Oracle": "오라클",
-  "Shaman": "샤먼"
- }
-};
-
-// UI strings.
 const UI = {
-  en_US:{ascendancy_short:"Ascendancy",tree_hint:"Hover or tap a node to read what it does",nodes:"Ascendancy passives",title:"PoE2 Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org"},
-  ru_RU:{ascendancy_short:"Подкласс",tree_hint:"Наведите курсор или коснитесь узла, чтобы прочитать описание",nodes:"Пассивные умения подкласса",title:"Рулетка подклассов PoE2",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов с официального сайта pathofexile2.com · Арты с poe2db.tw · Случайность от random.org"},
-  de_DE:{ascendancy_short:"Aufstiegsklasse",tree_hint:"Knoten anfahren oder antippen, um ihn zu lesen",nodes:"Aufstiegs-Passivfertigkeiten",title:"PoE2 Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen von der offiziellen Seite pathofexile2.com · Artworks von poe2db.tw · Zufall von random.org"},
-  fr_FR:{ascendancy_short:"Ascendance",tree_hint:"Survolez ou touchez un nœud pour lire son effet",nodes:"Passifs d'ascendance",title:"Roulette des ascendances PoE2",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes issus du site officiel pathofexile2.com · Illustrations de poe2db.tw · Aléatoire par random.org"},
-  es_ES:{ascendancy_short:"Ascendencia",tree_hint:"Pasa el cursor o toca un nodo para leerlo",nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases del sitio oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedad de random.org"},
-  pt_BR:{ascendancy_short:"Ascendência",tree_hint:"Passe o cursor ou toque em um nó para ler",nodes:"Passivas de ascendência",title:"Roleta de Ascendências PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes do site oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedade de random.org"},
-  th_TH:{ascendancy_short:"คลาสรอง",tree_hint:"วางเมาส์หรือแตะที่โหนดเพื่ออ่านรายละเอียด",nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง PoE2",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสจากเว็บไซต์ทางการ pathofexile2.com · ภาพจาก poe2db.tw · การสุ่มจาก random.org"},
-  ja_JP:{ascendancy_short:"アセンダンシー",tree_hint:"ノードにカーソルを合わせるかタップすると説明が出ます",nodes:"アセンダンシーパッシブ",title:"PoE2 アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名は公式サイト pathofexile2.com より · アートは poe2db.tw より · 乱数は random.org より"},
-  ko_KR:{ascendancy_short:"전직",tree_hint:"노드에 마우스를 올리거나 탭하면 설명이 표시됩니다",nodes:"전직 패시브",title:"PoE2 전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름은 공식 사이트 pathofexile2.com · 아트는 poe2db.tw · 난수는 random.org 제공"}
+  en_US:{ascendancy_short:"Ascendancy",tree_hint:"Hover or tap a node to read what it does",nodes:"Ascendancy passives",title:"Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names and art from pathofexile2.com, poe2db.tw and poedb.tw · Randomness from random.org"},
+  ru_RU:{ascendancy_short:"Подкласс",tree_hint:"Наведите курсор или коснитесь узла, чтобы прочитать описание",nodes:"Пассивные умения подкласса",title:"Рулетка подклассов",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов и арты с pathofexile2.com, poe2db.tw и poedb.tw · Случайность от random.org"},
+  de_DE:{ascendancy_short:"Aufstiegsklasse",tree_hint:"Knoten anfahren oder antippen, um ihn zu lesen",nodes:"Aufstiegs-Passivfertigkeiten",title:"Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen und Artworks von pathofexile2.com, poe2db.tw und poedb.tw · Zufall von random.org"},
+  fr_FR:{ascendancy_short:"Ascendance",tree_hint:"Survolez ou touchez un nœud pour lire son effet",nodes:"Passifs d'ascendance",title:"Roulette des ascendances",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes et illustrations de pathofexile2.com, poe2db.tw et poedb.tw · Aléatoire par random.org"},
+  es_ES:{ascendancy_short:"Ascendencia",tree_hint:"Pasa el cursor o toca un nodo para leerlo",nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases y arte de pathofexile2.com, poe2db.tw y poedb.tw · Aleatoriedad de random.org"},
+  pt_BR:{ascendancy_short:"Ascendência",tree_hint:"Passe o cursor ou toque em um nó para ler",nodes:"Passivas de ascendência",title:"Roleta de Ascendências",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes e arte de pathofexile2.com, poe2db.tw e poedb.tw · Aleatoriedade de random.org"},
+  th_TH:{ascendancy_short:"คลาสรอง",tree_hint:"วางเมาส์หรือแตะที่โหนดเพื่ออ่านรายละเอียด",nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสและภาพจาก pathofexile2.com, poe2db.tw และ poedb.tw · การสุ่มจาก random.org"},
+  ja_JP:{ascendancy_short:"アセンダンシー",tree_hint:"ノードにカーソルを合わせるかタップすると説明が出ます",nodes:"アセンダンシーパッシブ",title:"アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名とアートは pathofexile2.com・poe2db.tw・poedb.tw より · 乱数は random.org より"},
+  ko_KR:{ascendancy_short:"전직",tree_hint:"노드에 마우스를 올리거나 탭하면 설명이 표시됩니다",nodes:"전직 패시브",title:"전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름과 아트는 pathofexile2.com, poe2db.tw, poedb.tw · 난수는 random.org 제공"}
 };
 
 /* ============ NICKNAME GENERATOR POOLS ============ */
@@ -509,20 +247,27 @@ const NICK = {
     Witch:["Gravewhisper","Soulbinder","Hexweaver","Bonecaller","Ashenveil","Nightcrown","Bloodquill","Lichborn","Cursemaw","Emberwitch"],
     Sorceress:["Stormcaller","Frostveil","Spellblade","Timebender","Skyweaver","Emberdancer","Sandveil","Glassmind","Starcaller","Arcshaper"],
     Mercenary:["Gunhand","Coinblade","Grenadier","Crossfire","Steelheart","Warsmith","Ironsight","Sellsword","Gemborn","Quickdraw"],
-    Druid:["Oakheart","Moonhowl","Stormbear","Rootcaller","Wildshape","Thunderhide","Owlseer","Stagborn","Ashgrove","Skyfang"]
+    Druid:["Oakheart","Moonhowl","Stormbear","Rootcaller","Wildshape","Thunderhide","Owlseer","Stagborn","Ashgrove","Skyfang"],
+    Marauder:["Warbrand","Skullsplit","Rageborn","Bloodhorn","Ironmaul","Tribesworn","Warcry","Bonecrusher","Emberfist","Havoc"],
+    Duelist:["Bladedancer","Riposte","Duelbound","Swiftblade","Ironguard","Banneret","Redsteel","Flourish","Parry","Champion"],
+    Shadow:["Silentedge","Nightblade","Trapsmith","Veilstep","Poisonwit","Cutpurse","Ghostfoot","Sablefang","Whisperkill","Shivspark"],
+    Templar:["Zealbound","Faithhammer","Templeborn","Runewarden","Holyspark","Dogmafist","Sanctum","Creedborn","Lightwarden","Vowkeeper"],
+    Scion:["Highborn","Ascendrix","Nobleveil","Allthreads","Eternyth","Reliquary","Lumenheir","Crownfall","Gildenrose","Wayborn"]
   }
 };
 
 /* ===================== STATE ===================== */
 const $ = s => document.querySelector(s);
 const canvas = $("#wheel"), ctx = canvas.getContext("2d");
-const N = CLASSES.length, STEP = 2*Math.PI/N;
+let game = "poe2";                   // active game; G() is its data
+let CL = [], N = 0, STEP = 0;        // class list of the active game and the sector step
+function G(){ return GAMES[game]; }
 let lang = "en_US", rotation = 0, spinning = false, current = null, nickname = "", bgToggle = false;
-let order = CLASSES.map((_,i)=>i);   // sector positions on the wheel -> index into CLASSES
+let order = [];                      // sector positions on the wheel -> index into CL
 
 /* ===================== I18N ===================== */
 function t(k){ return (UI[lang] && UI[lang][k]) || UI.en_US[k] || k; }
-function nameOf(en){ return lang==="en_US" ? en : ((NAMES[lang]||{})[en] || en); }
+function nameOf(en){ const n=G().names; return ((n[lang]||n.en_US||{})[en]) || en; }
 function applyLang(){
   document.documentElement.lang = lang.split("_")[0];
   document.querySelectorAll("[data-i18n]").forEach(el=>{
@@ -531,7 +276,7 @@ function applyLang(){
     if(k==="spin" && spinning){ el.textContent = t("spinning"); return; }
     el.textContent = t(k);
   });
-  document.title = t("title");
+  document.title = t("title") + (GAMES[game] ? " · " + G().label : "");
   if(current) showResult(current, false);
   drawWheel();
   try{ localStorage.setItem("poe2-lang", lang);}catch(e){}
@@ -554,7 +299,7 @@ function drawWheel(){
   const fontHead = getComputedStyle(document.documentElement).getPropertyValue("--font-head");
   const fontBody = getComputedStyle(document.documentElement).getPropertyValue("--font-body");
   order.forEach((ci,i)=>{
-    const c = CLASSES[ci];
+    const c = CL[ci];
     const a0 = i*STEP, a1 = a0+STEP;
     const [c1,c2] = BASE_COLORS[c.base];
     const g = ctx.createRadialGradient(cx,cy,rIn,cx,cy,rOut);
@@ -658,12 +403,12 @@ function setStatus(kind, key){
 /* ===================== SECTOR ORDER ===================== */
 // The sectors are laid out afresh on every page load. A random comparator is enough
 // here: this is only the visual arrangement, the drawn class still comes from random.org.
-function initOrder(){ order = CLASSES.map((_,i)=>i).sort(()=>Math.random()-0.5); }
+function initOrder(){ order = CL.map((_,i)=>i).sort(()=>Math.random()-0.5); }
 // Which sector the pointer (fixed at the top of the wheel) is aiming at right now.
 function sectorUnderPointer(){
   const stepDeg = 360/N;
   const a = ((((-90 - rotation) % 360) + 360) % 360);
-  return CLASSES[order[Math.floor(a/stepDeg) % N]];
+  return CL[order[Math.floor(a/stepDeg) % N]];
 }
 
 /* ===================== SPIN ===================== */
@@ -682,7 +427,7 @@ async function spin(){
   const extraTurns = nums[2] % 2;             // 0 or 1 whole turn on top of the braking distance
   setStatus(source==="random.org"?"ok":"warn", source==="random.org"?"status_ok":"status_fallback");
 
-  const cls = CLASSES[idx];
+  const cls = CL[idx];
   preloadBg(cls);
 
   // pointer is at top (-90deg). Sector centre (deg) = pos*step + step/2 (canvas angle, clockwise from +x).
@@ -700,7 +445,12 @@ async function spin(){
 }
 
 /* ===================== RESULT / BACKGROUND ===================== */
-function bgUrl(c){ return c.noBg ? `assets/art/${c.key}.webp` : `assets/bg/${c.key}.webp`; }
+// Path of Exile 2 has a wide backdrop per ascendancy; Path of Exile only has the round
+// ascendancy-screen medallion, so that one is shown whole instead of cropped.
+function artUrl(c){ return `${G().assets}/${G().art}/${c.key}.webp`; }
+function assetUrl(sub, file){ return `${G().assets}/${sub}/${file}`; }
+function wideBg(c){ return G().id === "poe2" && !c.noBg; }
+function bgUrl(c){ return wideBg(c) ? `${G().assets}/bg/${c.key}.webp` : artUrl(c); }
 function preloadBg(c){ const im=new Image(); im.src=bgUrl(c); im.decoding="async"; }
 function swapBackground(c){
   const a=$("#bgA"), b=$("#bgB");
@@ -708,8 +458,9 @@ function swapBackground(c){
   const im = new Image();
   im.onload = ()=>{
     next.style.backgroundImage = `url("${bgUrl(c)}")`;
-    next.style.backgroundSize = c.noBg ? "contain" : "cover";
+    next.style.backgroundSize = wideBg(c) ? "cover" : "contain";
     next.style.backgroundColor = "#0b0a09";
+    next.classList.toggle("round", !wideBg(c));
     next.classList.add("show"); prev.classList.remove("show");
   };
   im.src = bgUrl(c);
@@ -720,7 +471,7 @@ function el(name, attrs){ const e=document.createElementNS(SVGNS,name); for(cons
 
 // Builds the ascendancy tree: class art inside the original viewBox, connections, node icons in their frames.
 function renderTree(c){
-  const tree = TREES[c.key];
+  const tree = G().trees[c.key];
   $("#nodesWrap").hidden = !tree;
   if(!tree) return;
   const nodes = tree.n;
@@ -732,7 +483,7 @@ function renderTree(c){
   const vx=tree.vb[0], vy=tree.vb[1], vw=tree.vb[2], vh=tree.vb[3];
   const svg = el("svg", {viewBox: vx+" "+vy+" "+vw+" "+vh});
   // background art (it fills the viewBox exactly on poe2db, so the nodes line up)
-  svg.appendChild(el("image", {x:vx, y:vy, width:vw, height:vh, href:"assets/art/"+c.key+".webp", preserveAspectRatio:"none"}));
+  svg.appendChild(el("image", {x:vx, y:vy, width:vw, height:vh, href:artUrl(c), preserveAspectRatio:"none"}));
   const g = el("g", {});
   tree.c.forEach(function(k){
     g.appendChild(Array.isArray(k)
@@ -740,15 +491,18 @@ function renderTree(c){
       : el("path", {class:"link", d:k}));
   });
   svg.appendChild(g);
+  (tree.deco||[]).forEach(function(d){   // the ornament in the middle of a Path of Exile panel
+    svg.appendChild(el("image", {x:d.x, y:d.y, width:d.w, height:d.h, href:assetUrl("ui","middle.webp"), style:"pointer-events:none"}));
+  });
   nodes.forEach(function(n,i){
-    const cx = n.x + n.w/2, cy = n.y + n.h/2, F = n.b ? 240 : 150;
+    const cx = n.x + n.w/2, cy = n.y + n.h/2, F = n.f;
     const grp = el("g", {class:"nd"});
     const clip = el("clipPath", {id:"clip"+i});
     clip.appendChild(el("circle", {cx:cx, cy:cy, r:n.w/2}));
     grp.appendChild(clip);
-    grp.appendChild(el("image", {class:"ico", x:n.x, y:n.y, width:n.w, height:n.h, href:"assets/nodes/"+n.i, "clip-path":"url(#clip"+i+")"}));
+    grp.appendChild(el("image", {class:"ico", x:n.x, y:n.y, width:n.w, height:n.h, href:assetUrl("nodes", n.i), "clip-path":"url(#clip"+i+")"}));
     grp.appendChild(el("circle", {class:"halo", cx:cx, cy:cy, r:n.w/2 + 8}));
-    grp.appendChild(el("image", {x:cx-F/2, y:cy-F/2, width:F, height:F, href:"assets/ui/frame-"+(n.b?"large":"small")+".webp", style:"pointer-events:none"}));
+    grp.appendChild(el("image", {x:cx-F/2, y:cy-F/2, width:F, height:F, href:assetUrl("ui", "frame-"+(n.b?"large":"small")+".webp"), style:"pointer-events:none"}));
     const hit = el("circle", {class:"hit", cx:cx, cy:cy, r:n.w/2 + 14});
     grp.appendChild(hit);
     const show = function(){ showTip(grp, hit, tree.t[n.t], c); };
@@ -797,7 +551,7 @@ function showResult(c, changeBg){
   renderTree(c);
   $("#ascName").textContent = nameOf(c.en);
   $("#chrName").textContent = nameOf(c.base);
-  $("#medal").src = `assets/art/${c.key}.webp`;
+  $("#medal").src = artUrl(c);
   $("#medal").alt = c.en;
   $("#result").classList.add("show");
   const nk=$("#nick");
@@ -844,8 +598,32 @@ async function copyNick(){
   const b=$("#copyBtn"); b.textContent=t("copied"); setTimeout(()=>b.textContent=t("copy"),1500);
 }
 
+/* ===================== GAME SWITCH ===================== */
+// Lays the wheel out for the active game and opens on the sector under the pointer.
+function applyGame(){
+  CL = G().classes; N = CL.length; STEP = 2*Math.PI/N;
+  document.querySelectorAll(".game").forEach(b=>{
+    const on = b.dataset.game === game;
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  current = null; nickname = "";
+  initOrder();
+  applyLang();
+  current = sectorUnderPointer();
+  showResult(current, true);
+  try{ localStorage.setItem("poe-game", game); }catch(e){}
+}
+async function switchGame(id){
+  if(id === game || spinning || !GAME_SRC[id]) return;
+  const btns = document.querySelectorAll(".game");
+  btns.forEach(b=>b.disabled = true);
+  try{ await loadGame(id); game = id; applyGame(); }
+  catch(e){ console.error(e); }
+  finally{ btns.forEach(b=>b.disabled = false); }
+}
+
 /* ===================== INIT ===================== */
-(function init(){
+(async function init(){
   const sel=$("#lang");
   LANGS.forEach(([code,label])=>{ const o=document.createElement("option"); o.value=code; o.textContent=label; sel.appendChild(o); });
   let saved=null; try{ saved=localStorage.getItem("poe2-lang"); }catch(e){}
@@ -862,14 +640,16 @@ async function copyNick(){
   document.addEventListener("click", function(e){ if(!e.target.closest("#treeWrap")) hideTip(); });
   $("#nickBtn").addEventListener("click", genNick);
   $("#copyBtn").addEventListener("click", copyNick);
-  initOrder();
-  applyLang();
-  // open on whatever the pointer happens to be aiming at
-  current = sectorUnderPointer();
-  showResult(current, true);
+  document.querySelectorAll(".game").forEach(b=>b.addEventListener("click", ()=>switchGame(b.dataset.game)));
+
+  let g=null; try{ g=localStorage.getItem("poe-game"); }catch(e){}
+  game = GAME_SRC[g] ? g : "poe2";
+  await loadGame(game);
+  applyGame();
   // redraw once web fonts are ready so Cinzel is used on the wheel
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawWheel);
 })();
+
 </script>
 </body>
 </html>
