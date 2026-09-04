@@ -587,16 +587,44 @@ function drawWheel(){
   }
 }
 function setRotation(deg){ rotation = deg; canvas.style.transform = `rotate(${deg}deg)`; }
-function easeOut(x){ return 1 - Math.pow(1-x, 4); }
-function animateTo(target, dur){
-  return new Promise(res=>{
-    const start = rotation, delta = target-start, t0 = performance.now();
-    (function frame(now){
-      const p = Math.min(1,(now-t0)/dur);
-      setRotation(start + delta*easeOut(p));
-      p<1 ? requestAnimationFrame(frame) : res();
-    })(t0);
-  });
+
+// The wheel starts turning on the click and keeps turning while random.org is
+// asked for the result, so nothing waits for the network. land() then brakes it
+// onto the drawn sector without a jump in speed.
+const SPIN_ACC = 2400;      // deg/s^2 while getting up to speed
+const SPIN_VMAX = 900;      // deg/s cruising speed (2.5 turns per second)
+const SPIN_MIN_FREE = 1.0;  // s of free spinning before braking may begin
+const SPIN_BRAKE = 3.0;     // s, nominal braking time
+function startSpin(){
+  let last = performance.now(), free = 0, v = 0, rot = rotation;
+  let pending = null, brake = null, done;
+  const finished = new Promise(res=>{ done = res; });
+
+  function frame(now){
+    const dt = Math.min((now - last)/1000, 0.05);  // clamped, so a backgrounded tab cannot jump the wheel
+    last = now;
+    if(brake){
+      brake.t += dt;
+      const x = Math.min(1, brake.t/brake.dur);
+      setRotation(brake.from + brake.D*(1 - Math.pow(1-x, 4)));
+      if(x >= 1){ done(); return; }
+    } else {
+      free += dt;
+      v = Math.min(SPIN_VMAX, v + SPIN_ACC*dt);
+      rot += v*dt;
+      setRotation(rot);
+      if(pending && free >= SPIN_MIN_FREE && v >= SPIN_VMAX){
+        let D = v*SPIN_BRAKE/4;                                   // a quartic ease-out at this speed covers this much
+        D += ((((pending.deg - (rot + D)) % 360) + 360) % 360);   // stretch it so the sector ends under the pointer
+        D += 360*pending.turns;
+        while(D < 720) D += 360;                                  // never brake in less than two turns
+        brake = {t: 0, from: rot, D: D, dur: 4*D/v};              // 4D/v keeps the speed continuous at the handover
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  return { finished: finished, land: function(deg, turns){ pending = {deg: (((deg % 360) + 360) % 360), turns: turns || 0}; } };
 }
 
 /* ===================== RANDOM.ORG ===================== */
@@ -645,12 +673,13 @@ async function spin(){
   $("#spinBtn").disabled = true; $("#hub").classList.add("busy");
   document.querySelectorAll('[data-i18n="spin"]').forEach(el=>el.textContent=t("spinning"));
   setStatus("busy","status_fetch");
+  const run = startSpin();   // the wheel moves on the next frame, before the request is even answered
 
   // one call: [sector index, jitter within sector, extra full turns]
   const {nums, source} = await getRandom(3, 0, 9999);
   const idx = nums[0] % N;
   const jitter = (nums[1]/9999 - .5) * 0.8;   // -0.4..0.4 of a sector
-  const turns = 5 + (nums[2] % 3);            // 5..7 full turns
+  const extraTurns = nums[2] % 2;             // 0 or 1 whole turn on top of the braking distance
   setStatus(source==="random.org"?"ok":"warn", source==="random.org"?"status_ok":"status_fallback");
 
   const cls = CLASSES[idx];
@@ -660,11 +689,8 @@ async function spin(){
   const pos = order.indexOf(idx);
   const stepDeg = 360/N;
   const centre = pos*stepDeg + stepDeg/2 + jitter*stepDeg;
-  const base = ((rotation % 360) + 360) % 360;
-  let target = -90 - centre;                   // rotation needed (mod 360)
-  target = ((target % 360) + 360) % 360;
-  const delta = ((target - base) % 360 + 360) % 360;
-  await animateTo(rotation + delta + 360*turns, 5200 + (nums[2]%3)*400);
+  run.land(-90 - centre, extraTurns);          // rotation that puts this sector under the pointer
+  await run.finished;
 
   current = cls; nickname = "";
   showResult(cls, true);

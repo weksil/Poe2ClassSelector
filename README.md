@@ -8,6 +8,7 @@ One-page site: a roulette wheel that picks a Path of Exile 2 ascendancy class an
 - The page opens already showing whichever ascendancy the pointer happens to be aiming at, art and tree included.
 - Language selector with the 9 languages of the official language switcher on pathofexile2.com; class names are the official translations from that site.
 - Randomness comes from the random.org HTTP API (true random numbers). If random.org is unreachable, the page falls back to `crypto.getRandomValues` and says so in the status line.
+- The wheel starts turning on the click itself: it spins freely while random.org is being asked, then brakes onto the drawn sector with no jump in speed, so the button never feels like it is waiting for the network.
 - Nickname generator builds Path-of-Exile-compatible names (3–23 characters, letters and underscores), flavoured by the rolled character class.
 - The result card draws the ascendancy passive tree the way poe2db does: the round class art with the nodes and their connections on top. Hovering or tapping a node opens a Path-of-Exile-style tooltip with its name and effect in the selected language.
 
