@@ -518,6 +518,7 @@ const $ = s => document.querySelector(s);
 const canvas = $("#wheel"), ctx = canvas.getContext("2d");
 const N = CLASSES.length, STEP = 2*Math.PI/N;
 let lang = "en_US", rotation = 0, spinning = false, current = null, nickname = "", bgToggle = false;
+let order = CLASSES.map((_,i)=>i);   // sector positions on the wheel -> index into CLASSES
 
 /* ===================== I18N ===================== */
 function t(k){ return (UI[lang] && UI[lang][k]) || UI.en_US[k] || k; }
@@ -552,7 +553,8 @@ function drawWheel(){
   const rOut = R-14, rIn = R*0.17;
   const fontHead = getComputedStyle(document.documentElement).getPropertyValue("--font-head");
   const fontBody = getComputedStyle(document.documentElement).getPropertyValue("--font-body");
-  CLASSES.forEach((c,i)=>{
+  order.forEach((ci,i)=>{
+    const c = CLASSES[ci];
     const a0 = i*STEP, a1 = a0+STEP;
     const [c1,c2] = BASE_COLORS[c.base];
     const g = ctx.createRadialGradient(cx,cy,rIn,cx,cy,rOut);
@@ -625,6 +627,26 @@ function setStatus(kind, key){
   const s=$("#statusText"); s.dataset.i18n=key; s.textContent=t(key);
 }
 
+/* ===================== SECTOR ORDER ===================== */
+// Fisher-Yates over the class list; needs N-1 random numbers.
+function shuffleOrder(nums){
+  const a = CLASSES.map((_,i)=>i);
+  for(let i=a.length-1, k=0; i>0; i--, k++){
+    const j = nums[k] % (i+1);
+    const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+// The sectors are laid out afresh on every page load. Local randomness is enough
+// here: this is only the visual arrangement, the drawn class still comes from random.org.
+function initOrder(){ order = shuffleOrder(localRandom(N-1, 0, 9999)); }
+// Which sector the pointer (fixed at the top of the wheel) is aiming at right now.
+function sectorUnderPointer(){
+  const stepDeg = 360/N;
+  const a = ((((-90 - rotation) % 360) + 360) % 360);
+  return CLASSES[order[Math.floor(a/stepDeg) % N]];
+}
+
 /* ===================== SPIN ===================== */
 async function spin(){
   if(spinning) return;
@@ -643,9 +665,10 @@ async function spin(){
   const cls = CLASSES[idx];
   preloadBg(cls);
 
-  // pointer is at top (-90deg). Sector centre (deg) = idx*step + step/2 (canvas angle, clockwise from +x).
+  // pointer is at top (-90deg). Sector centre (deg) = pos*step + step/2 (canvas angle, clockwise from +x).
+  const pos = order.indexOf(idx);
   const stepDeg = 360/N;
-  const centre = idx*stepDeg + stepDeg/2 + jitter*stepDeg;
+  const centre = pos*stepDeg + stepDeg/2 + jitter*stepDeg;
   const base = ((rotation % 360) + 360) % 360;
   let target = -90 - centre;                   // rotation needed (mod 360)
   target = ((target % 360) + 360) % 360;
@@ -822,7 +845,11 @@ async function copyNick(){
   document.addEventListener("click", function(e){ if(!e.target.closest("#treeWrap")) hideTip(); });
   $("#nickBtn").addEventListener("click", genNick);
   $("#copyBtn").addEventListener("click", copyNick);
+  initOrder();
   applyLang();
+  // open on whatever the pointer happens to be aiming at
+  current = sectorUnderPointer();
+  showResult(current, true);
   // redraw once web fonts are ready so Cinzel is used on the wheel
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawWheel);
 })();
