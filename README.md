@@ -26,7 +26,7 @@ Where the source has no translation the page falls back to English. That is Thai
 ## Assets
 
 - `assets/poe2/bg/*.webp` — wide class artworks used as the page background. `assets/poe2/art/*.webp` — round ascendancy illustrations used in the result card and as the tree background. Abyssal Lich has no wide art, so its illustration serves as the background too.
-- `assets/poe1/bg/*.webp` — the round ascendancy-screen medallion of each class, used for the tree, the result card and, dimmed, as the page background.
+- `assets/poe1/bg/*.webp` — the round ascendancy-screen medallion of each class, used for the tree, the result card, and as the page background where it is blown up to fill the screen, capped at three times the size it would need to fit.
 - `assets/<game>/nodes/*.webp` — passive node icons, 250 for Path of Exile 2 and 271 for Path of Exile.
 - `assets/<game>/ui/` — the node frames, plus the centre ornament of the Path of Exile ascendancy panel.
 

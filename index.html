@@ -23,7 +23,6 @@ body{position:relative;overflow-x:hidden}
 /* ---- background layers ---- */
 .bg{position:fixed;inset:0;z-index:0;background:#0b0a09 center/cover no-repeat;opacity:0;transition:opacity 1.2s ease}
 .bg.show{opacity:1}
-.bg.round.show{opacity:.5}   /* Path of Exile only has the round ascendancy medallion: keep it as a faint emblem */
 .bg-default{position:fixed;inset:0;z-index:-1;
   background:radial-gradient(1200px 700px at 50% 20%,#2a2116 0%,#120f0b 55%,#070605 100%)}
 .bg-veil{position:fixed;inset:0;z-index:1;pointer-events:none;
@@ -457,7 +456,9 @@ function swapBackground(c){
   const im = new Image();
   im.onload = ()=>{
     next.style.backgroundImage = `url("${bgUrl(c)}")`;
-    next.style.backgroundSize = wideBg(c) ? "cover" : "contain";
+    // The round Path of Exile medallion is blown up to fill the backdrop, but never
+    // past three times the size at which it would fit on screen.
+    next.style.backgroundSize = wideBg(c) ? "cover" : "min(max(100vw, 100vh), calc(3 * min(100vw, 100vh)))";
     next.style.backgroundColor = "#0b0a09";
     next.classList.toggle("round", !wideBg(c));
     next.classList.add("show"); prev.classList.remove("show");
