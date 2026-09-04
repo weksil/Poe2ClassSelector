@@ -85,13 +85,27 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .nick-actions{display:flex;gap:8px;flex-wrap:wrap}
 .hint{font-size:12px;color:var(--muted);margin-top:8px}
 
-.nodes{margin-top:6px;max-height:min(46vh,420px);overflow:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--gold) transparent}
-.node{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(200,170,110,.15)}
-.node:last-child{border-bottom:0}
-.node img{width:44px;height:44px;flex:none;border-radius:50%;border:2px solid #7a5a22;box-shadow:0 0 0 2px #000,0 0 12px rgba(200,170,110,.25);background:#000}
-.node .nn{font-weight:600;color:var(--gold-2);font-size:14px;line-height:1.25}
-.node .nd{font-size:12.5px;color:var(--text);opacity:.9;margin-top:3px;line-height:1.4;white-space:pre-line}
-.node .nd:empty{display:none}
+/* ---- ascendancy tree ---- */
+.tree-wrap{position:relative;margin-top:10px;width:100%;aspect-ratio:1;border-radius:50%;overflow:visible}
+.tree-wrap svg{width:100%;height:100%;display:block;border-radius:50%;background:#070605;box-shadow:0 0 0 1px rgba(200,170,110,.35),0 10px 40px rgba(0,0,0,.75)}
+.tree-wrap svg .link{stroke:rgba(190,175,140,.55);stroke-width:14;fill:none;stroke-linecap:round}
+.tree-wrap svg .hit{fill:transparent;cursor:pointer}
+.tree-wrap svg .halo{fill:none;stroke:var(--gold-2);stroke-width:14;opacity:0;pointer-events:none;transition:opacity .12s}
+.tree-wrap svg g.nd.on .halo{opacity:.95}
+.tree-wrap svg g.nd.on .ico{filter:brightness(1.35)}
+.tip{position:absolute;z-index:9;min-width:220px;max-width:min(340px,86vw);pointer-events:none;opacity:0;transform:translateY(4px);
+  transition:opacity .12s ease,transform .12s ease;background:linear-gradient(180deg,#0b0a08,#050403);border:1px solid #6b5a33;
+  box-shadow:0 10px 30px rgba(0,0,0,.9),inset 0 0 0 1px rgba(0,0,0,.8)}
+.tip.on{opacity:1;transform:none}
+.tip .tip-head{font-family:var(--font-head);font-weight:700;text-align:center;color:#e8dcc0;font-size:15px;padding:7px 12px;
+  background:linear-gradient(180deg,#241d10,#0d0a06);border-bottom:1px solid #6b5a33;letter-spacing:.03em}
+.tip .tip-body{padding:9px 12px 11px}
+.tip .tip-prop{font-size:11.5px;color:#a79d88}
+.tip .tip-prop b{color:#d6c69c;font-weight:500}
+.tip .tip-sep{height:1px;background:linear-gradient(90deg,transparent,#5c4d2c,transparent);margin:8px 0}
+.tip .tip-mod{font-size:12.5px;color:#8d8dfa;line-height:1.45;white-space:pre-line}
+.tip .tip-mod + .tip-mod{margin-top:4px}
+.tree-hint{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
 footer{position:relative;z-index:2;text-align:center;font-size:12px;color:var(--muted);padding:12px 20px 18px}
 footer a{color:var(--gold);text-decoration:none}
 footer a:hover{text-decoration:underline}
@@ -144,7 +158,10 @@ footer a:hover{text-decoration:underline}
         <div id="nodesWrap">
           <hr>
           <div class="label"><span data-i18n="nodes">Ascendancy passives</span> <span id="nodeCount"></span></div>
-          <div class="nodes" id="nodes"></div>
+          <div class="tree-wrap" id="treeWrap">
+            <div class="tip" id="tip" role="tooltip"></div>
+          </div>
+          <div class="tree-hint" data-i18n="tree_hint">Hover a node to read it</div>
         </div>
       </div>
     </aside>
@@ -155,7 +172,7 @@ footer a:hover{text-decoration:underline}
   </footer>
 </div>
 
-<script src="data/nodes.js"></script>
+<script src="data/trees.js"></script>
 <script>
 /* ===================== DATA ===================== */
 // Languages exactly as listed in the official pathofexile2.com language switcher.
@@ -468,15 +485,15 @@ const NAMES = {
 
 // UI strings.
 const UI = {
-  en_US:{nodes:"Ascendancy passives",title:"PoE2 Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org"},
-  ru_RU:{nodes:"Пассивные умения подкласса",title:"Рулетка подклассов PoE2",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов с официального сайта pathofexile2.com · Арты с poe2db.tw · Случайность от random.org"},
-  de_DE:{nodes:"Aufstiegs-Passivfertigkeiten",title:"PoE2 Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen von der offiziellen Seite pathofexile2.com · Artworks von poe2db.tw · Zufall von random.org"},
-  fr_FR:{nodes:"Passifs d'ascendance",title:"Roulette des ascendances PoE2",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes issus du site officiel pathofexile2.com · Illustrations de poe2db.tw · Aléatoire par random.org"},
-  es_ES:{nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases del sitio oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedad de random.org"},
-  pt_BR:{nodes:"Passivas de ascendência",title:"Roleta de Ascendências PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes do site oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedade de random.org"},
-  th_TH:{nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง PoE2",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสจากเว็บไซต์ทางการ pathofexile2.com · ภาพจาก poe2db.tw · การสุ่มจาก random.org"},
-  ja_JP:{nodes:"アセンダンシーパッシブ",title:"PoE2 アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名は公式サイト pathofexile2.com より · アートは poe2db.tw より · 乱数は random.org より"},
-  ko_KR:{nodes:"전직 패시브",title:"PoE2 전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름은 공식 사이트 pathofexile2.com · 아트는 poe2db.tw · 난수는 random.org 제공"}
+  en_US:{ascendancy_short:"Ascendancy",tree_hint:"Hover a node to read what it does",nodes:"Ascendancy passives",title:"PoE2 Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org"},
+  ru_RU:{ascendancy_short:"Подкласс",tree_hint:"Наведите курсор на узел, чтобы прочитать описание",nodes:"Пассивные умения подкласса",title:"Рулетка подклассов PoE2",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов с официального сайта pathofexile2.com · Арты с poe2db.tw · Случайность от random.org"},
+  de_DE:{ascendancy_short:"Aufstiegsklasse",tree_hint:"Fahre über einen Knoten, um ihn zu lesen",nodes:"Aufstiegs-Passivfertigkeiten",title:"PoE2 Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen von der offiziellen Seite pathofexile2.com · Artworks von poe2db.tw · Zufall von random.org"},
+  fr_FR:{ascendancy_short:"Ascendance",tree_hint:"Survolez un nœud pour lire son effet",nodes:"Passifs d'ascendance",title:"Roulette des ascendances PoE2",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes issus du site officiel pathofexile2.com · Illustrations de poe2db.tw · Aléatoire par random.org"},
+  es_ES:{ascendancy_short:"Ascendencia",tree_hint:"Pasa el cursor sobre un nodo para leerlo",nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases del sitio oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedad de random.org"},
+  pt_BR:{ascendancy_short:"Ascendência",tree_hint:"Passe o cursor sobre um nó para ler",nodes:"Passivas de ascendência",title:"Roleta de Ascendências PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes do site oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedade de random.org"},
+  th_TH:{ascendancy_short:"คลาสรอง",tree_hint:"วางเมาส์บนโหนดเพื่ออ่านรายละเอียด",nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง PoE2",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสจากเว็บไซต์ทางการ pathofexile2.com · ภาพจาก poe2db.tw · การสุ่มจาก random.org"},
+  ja_JP:{ascendancy_short:"アセンダンシー",tree_hint:"ノードにカーソルを合わせると説明が出ます",nodes:"アセンダンシーパッシブ",title:"PoE2 アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名は公式サイト pathofexile2.com より · アートは poe2db.tw より · 乱数は random.org より"},
+  ko_KR:{ascendancy_short:"전직",tree_hint:"노드에 마우스를 올리면 설명이 표시됩니다",nodes:"전직 패시브",title:"PoE2 전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름은 공식 사이트 pathofexile2.com · 아트는 poe2db.tw · 난수는 random.org 제공"}
 };
 
 /* ============ NICKNAME GENERATOR POOLS ============ */
@@ -657,23 +674,87 @@ function swapBackground(c){
   };
   im.src = bgUrl(c);
 }
-function nodeText(n, field){ const v=n[field]; return v[lang] || v.en_US || (field==="n" ? "" : []); }
-function renderNodes(c){
-  const list = NODES.filter(n=>n.a===c.key);
-  $("#nodesWrap").hidden = !list.length;
-  $("#nodeCount").textContent = list.length ? `· ${list.length}` : "";
-  const box=$("#nodes"); box.innerHTML="";
-  list.forEach(n=>{
-    const row=document.createElement("div"); row.className="node";
-    const img=document.createElement("img"); img.src=`assets/nodes/${n.f}`; img.alt=""; img.loading="lazy";
-    const body=document.createElement("div");
-    const nn=document.createElement("div"); nn.className="nn"; nn.textContent=nodeText(n,"n");
-    const nd=document.createElement("div"); nd.className="nd"; nd.textContent=nodeText(n,"d").join("\n");
-    body.append(nn,nd); row.append(img,body); box.appendChild(row);
+const SVGNS = "http://www.w3.org/2000/svg";
+function pick(map){ return map[lang] || map.en_US; }
+function el(name, attrs){ const e=document.createElementNS(SVGNS,name); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+// Builds the ascendancy tree: class art inside the original viewBox, connections, node icons in their frames.
+function renderTree(c){
+  const tree = TREES[c.key];
+  $("#nodesWrap").hidden = !tree;
+  if(!tree) return;
+  const nodes = tree.n;
+  $("#nodeCount").textContent = "\u00b7 " + nodes.length;
+  const wrap = $("#treeWrap"), tip = $("#tip");
+  const old = wrap.querySelector("svg"); if(old) old.remove();
+  hideTip();
+
+  const vx=tree.vb[0], vy=tree.vb[1], vw=tree.vb[2], vh=tree.vb[3];
+  const svg = el("svg", {viewBox: vx+" "+vy+" "+vw+" "+vh});
+  // background art (it fills the viewBox exactly on poe2db, so the nodes line up)
+  svg.appendChild(el("image", {x:vx, y:vy, width:vw, height:vh, href:"assets/art/"+c.key+".webp", preserveAspectRatio:"none"}));
+  const g = el("g", {});
+  tree.c.forEach(function(k){
+    g.appendChild(Array.isArray(k)
+      ? el("line", {class:"link", x1:k[0], y1:k[1], x2:k[2], y2:k[3]})
+      : el("path", {class:"link", d:k}));
   });
+  svg.appendChild(g);
+  nodes.forEach(function(n,i){
+    const cx = n.x + n.w/2, cy = n.y + n.h/2, F = n.b ? 240 : 150;
+    const grp = el("g", {class:"nd"});
+    const clip = el("clipPath", {id:"clip"+i});
+    clip.appendChild(el("circle", {cx:cx, cy:cy, r:n.w/2}));
+    grp.appendChild(clip);
+    grp.appendChild(el("image", {class:"ico", x:n.x, y:n.y, width:n.w, height:n.h, href:"assets/nodes/"+n.i, "clip-path":"url(#clip"+i+")"}));
+    grp.appendChild(el("circle", {class:"halo", cx:cx, cy:cy, r:n.w/2 + 8}));
+    grp.appendChild(el("image", {x:cx-F/2, y:cy-F/2, width:F, height:F, href:"assets/ui/frame-"+(n.b?"large":"small")+".webp", style:"pointer-events:none"}));
+    const hit = el("circle", {class:"hit", cx:cx, cy:cy, r:n.w/2 + 14});
+    grp.appendChild(hit);
+    const show = function(){ showTip(grp, hit, tree.t[n.t], c); };
+    hit.addEventListener("mouseenter", show);
+    hit.addEventListener("mouseleave", hideTip);
+    hit.addEventListener("click", function(e){ e.stopPropagation(); grp.classList.contains("on") ? hideTip() : show(); });
+    svg.appendChild(grp);
+  });
+  wrap.insertBefore(svg, tip);
+}
+function hideTip(){
+  $("#tip").classList.remove("on");
+  document.querySelectorAll("#treeWrap g.nd.on").forEach(function(g){ g.classList.remove("on"); });
+}
+function showTip(grp, hit, txt, c){
+  hideTip(); grp.classList.add("on");
+  const tip = $("#tip");
+  tip.innerHTML = "";
+  const head=document.createElement("div"); head.className="tip-head"; head.textContent=pick(txt.n); tip.appendChild(head);
+  const body=document.createElement("div"); body.className="tip-body";
+  const p1=document.createElement("div"); p1.className="tip-prop";
+  p1.textContent = t("ascendancy_short")+": "; const b1=document.createElement("b"); b1.textContent=nameOf(c.en); p1.appendChild(b1);
+  const p2=document.createElement("div"); p2.className="tip-prop";
+  p2.textContent = t("character")+": "; const b2=document.createElement("b"); b2.textContent=nameOf(c.base); p2.appendChild(b2);
+  body.append(p1,p2);
+  const mods = pick(txt.d) || [];
+  if(mods.length){
+    const sep=document.createElement("div"); sep.className="tip-sep"; body.appendChild(sep);
+    mods.forEach(function(m){ const d=document.createElement("div"); d.className="tip-mod"; d.textContent=m; body.appendChild(d); });
+  }
+  tip.appendChild(body);
+  // place the tooltip beside the node, kept inside the viewport
+  const wrap=$("#treeWrap"), wb=wrap.getBoundingClientRect(), nb=hit.getBoundingClientRect();
+  tip.classList.add("on");
+  const tw=tip.offsetWidth, th=tip.offsetHeight;
+  const nx=nb.left-wb.left+nb.width/2, ny=nb.top-wb.top+nb.height/2;
+  let left = nx > wb.width/2 ? nx - nb.width/2 - tw - 10 : nx + nb.width/2 + 10;
+  const minLeft = -Math.min(70, Math.max(0, wb.left - 8));
+  const maxLeft = wb.width + Math.min(70, Math.max(0, window.innerWidth - wb.right - 8)) - tw;
+  left = Math.max(minLeft, Math.min(left, Math.max(minLeft, maxLeft)));
+  const top = Math.max(-10, Math.min(ny - th/2, wb.height - th + 10));
+  tip.style.left = Math.round(left)+"px";
+  tip.style.top = Math.round(top)+"px";
 }
 function showResult(c, changeBg){
-  renderNodes(c);
+  renderTree(c);
   $("#ascName").textContent = nameOf(c.en);
   $("#chrName").textContent = nameOf(c.base);
   $("#medal").src = `assets/art/${c.key}.webp`;
@@ -738,6 +819,7 @@ async function copyNick(){
   $("#spinBtn").addEventListener("click", spin);
   $("#hub").addEventListener("click", spin);
   $("#hub").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); spin(); } });
+  document.addEventListener("click", function(e){ if(!e.target.closest("#treeWrap")) hideTip(); });
   $("#nickBtn").addEventListener("click", genNick);
   $("#copyBtn").addEventListener("click", copyNick);
   applyLang();
