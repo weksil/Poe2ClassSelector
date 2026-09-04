@@ -4,7 +4,7 @@ One-page site: a roulette wheel that picks a Path of Exile 2 ascendancy class an
 
 - Open `index.html` in a browser (or serve the folder statically, e.g. `python -m http.server`).
 - Wheel sectors show *ascendancy + character class*; after the spin the page background switches to the class art.
-- The sectors are laid out in a fresh random order on every page load (plain `crypto.getRandomValues`, since this is only the visual arrangement).
+- The sectors are laid out in a fresh random order on every page load, with a plain random comparator, since this is only the visual arrangement.
 - The page opens already showing whichever ascendancy the pointer happens to be aiming at, art and tree included.
 - Language selector with the 9 languages of the official language switcher on pathofexile2.com; class names are the official translations from that site.
 - Randomness comes from the random.org HTTP API (true random numbers). If random.org is unreachable, the page falls back to `crypto.getRandomValues` and says so in the status line.

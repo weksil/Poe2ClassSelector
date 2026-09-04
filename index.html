@@ -628,18 +628,9 @@ function setStatus(kind, key){
 }
 
 /* ===================== SECTOR ORDER ===================== */
-// Fisher-Yates over the class list; needs N-1 random numbers.
-function shuffleOrder(nums){
-  const a = CLASSES.map((_,i)=>i);
-  for(let i=a.length-1, k=0; i>0; i--, k++){
-    const j = nums[k] % (i+1);
-    const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
-  }
-  return a;
-}
-// The sectors are laid out afresh on every page load. Local randomness is enough
+// The sectors are laid out afresh on every page load. A random comparator is enough
 // here: this is only the visual arrangement, the drawn class still comes from random.org.
-function initOrder(){ order = shuffleOrder(localRandom(N-1, 0, 9999)); }
+function initOrder(){ order = CLASSES.map((_,i)=>i).sort(()=>Math.random()-0.5); }
 // Which sector the pointer (fixed at the top of the wheel) is aiming at right now.
 function sectorUnderPointer(){
   const stepDeg = 360/N;
