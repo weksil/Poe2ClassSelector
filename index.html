@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>PoE2 Ascendancy Roulette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c8aa6e; --gold-2:#e6cf94; --ink:#0b0a09; --panel:rgba(12,10,8,.72);
+  --text:#efe6d3; --muted:#a79d88; --line:rgba(200,170,110,.35);
+  --font-head:'Cinzel','Times New Roman',serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,'Noto Sans','Noto Sans JP','Noto Sans KR','Noto Sans Thai',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--ink);color:var(--text);font-family:var(--font-body)}
+body{position:relative;overflow-x:hidden}
+
+/* ---- background layers ---- */
+.bg{position:fixed;inset:0;z-index:0;background:#0b0a09 center/cover no-repeat;opacity:0;transition:opacity 1.2s ease}
+.bg.show{opacity:1}
+.bg-default{position:fixed;inset:0;z-index:-1;
+  background:radial-gradient(1200px 700px at 50% 20%,#2a2116 0%,#120f0b 55%,#070605 100%)}
+.bg-veil{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(7,6,5,.55) 0%,rgba(7,6,5,.15) 35%,rgba(7,6,5,.35) 75%,rgba(7,6,5,.85) 100%)}
+
+/* ---- layout ---- */
+.page{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 28px;flex-wrap:wrap}
+h1{font-family:var(--font-head);font-weight:700;letter-spacing:.06em;font-size:clamp(18px,2.4vw,28px);margin:0;color:var(--gold-2);text-shadow:0 2px 12px rgba(0,0,0,.8)}
+.lang{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
+select{background:rgba(12,10,8,.85);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font:inherit;cursor:pointer}
+select:focus{outline:2px solid var(--gold);outline-offset:1px}
+
+main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,460px);gap:32px;align-items:center;padding:8px 28px 40px;max-width:1280px;width:100%;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr;gap:24px}}
+
+/* ---- wheel ---- */
+.wheel-wrap{position:relative;width:min(92vw,640px);aspect-ratio:1;margin:0 auto;filter:drop-shadow(0 20px 50px rgba(0,0,0,.8))}
+canvas#wheel{width:100%;height:100%;display:block;border-radius:50%;will-change:transform}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;
+  border-left:18px solid transparent;border-right:18px solid transparent;border-top:40px solid var(--gold-2);
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.9));z-index:3}
+.pointer::after{content:"";position:absolute;left:-12px;top:-40px;border-left:12px solid transparent;border-right:12px solid transparent;border-top:28px solid #7a5a22}
+.hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:16%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#3a2e1c,#120e09 70%);border:3px solid var(--gold);box-shadow:0 0 0 6px rgba(0,0,0,.6),inset 0 0 20px rgba(0,0,0,.9);z-index:2;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s ease,box-shadow .2s}
+.hub:hover{transform:translate(-50%,-50%) scale(1.05);box-shadow:0 0 0 6px rgba(0,0,0,.6),0 0 30px rgba(200,170,110,.5),inset 0 0 20px rgba(0,0,0,.9)}
+.hub.busy{cursor:progress;opacity:.7}
+.hub span{font-family:var(--font-head);font-weight:700;font-size:clamp(11px,1.6vw,18px);color:var(--gold-2);letter-spacing:.08em;text-align:center;line-height:1.1;padding:4px}
+
+/* ---- side panel ---- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;backdrop-filter:blur(8px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.btn{appearance:none;border:1px solid var(--gold);background:linear-gradient(180deg,#5a4520,#2e2210);color:var(--gold-2);font-family:var(--font-head);font-weight:700;letter-spacing:.1em;
+  font-size:16px;padding:14px 22px;border-radius:8px;cursor:pointer;width:100%;transition:transform .1s,filter .2s;text-transform:uppercase}
+.btn:hover:not(:disabled){filter:brightness(1.2)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:progress}
+.btn.secondary{font-family:var(--font-body);text-transform:none;letter-spacing:0;font-size:14px;padding:10px 16px;width:auto;background:linear-gradient(180deg,#2b241a,#181309)}
+.status{margin-top:12px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:18px}
+.dot{width:8px;height:8px;border-radius:50%;background:#555;flex:none}
+.dot.ok{background:#63c26b;box-shadow:0 0 8px #63c26b}
+.dot.warn{background:#d9a441;box-shadow:0 0 8px #d9a441}
+.dot.busy{background:var(--gold);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+.result{margin-top:22px;display:none}
+.result.show{display:block;animation:rise .6s ease}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.result-head{display:flex;gap:16px;align-items:center}
+.medal{width:96px;height:96px;border-radius:50%;flex:none;object-fit:cover;border:2px solid var(--gold);box-shadow:0 0 25px rgba(200,170,110,.35),0 6px 20px rgba(0,0,0,.8);background:#000}
+.label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.asc{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,2.6vw,30px);color:var(--gold-2);line-height:1.15;margin:4px 0 2px}
+.chr{font-size:15px;color:var(--text)}
+.chr b{color:var(--gold)}
+hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+
+.nick-row{display:flex;flex-direction:column;gap:10px}
+.nick{width:100%;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:700;font-size:clamp(18px,2.2vw,24px);letter-spacing:.04em;color:var(--gold-2);
+  background:rgba(0,0,0,.45);border:1px dashed var(--line);border-radius:8px;padding:10px 14px;min-height:50px;word-break:break-all;text-align:center}
+.nick.empty{color:var(--muted);font-family:var(--font-body);font-weight:400;font-size:14px;letter-spacing:0}
+.nick-actions{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
+
+footer{position:relative;z-index:2;text-align:center;font-size:12px;color:var(--muted);padding:12px 20px 18px}
+footer a{color:var(--gold);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="bg-default"></div>
+<div class="bg" id="bgA"></div>
+<div class="bg" id="bgB"></div>
+<div class="bg-veil"></div>
+
+<div class="page">
+  <header>
+    <h1 data-i18n="title">PoE2 Ascendancy Roulette</h1>
+    <label class="lang"><span data-i18n="language">Language</span>
+      <select id="lang" aria-label="Language"></select>
+    </label>
+  </header>
+
+  <main>
+    <section class="wheel-wrap" aria-label="Roulette">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas id="wheel" width="1280" height="1280"></canvas>
+      <div class="hub" id="hub" role="button" tabindex="0"><span data-i18n="spin">Spin</span></div>
+    </section>
+
+    <aside class="panel">
+      <button class="btn" id="spinBtn" data-i18n="spin">Spin</button>
+      <div class="status"><span class="dot" id="dot"></span><span id="statusText" data-i18n="status_idle">Randomness: random.org</span></div>
+
+      <div class="result" id="result">
+        <div class="result-head">
+          <img class="medal" id="medal" alt="">
+          <div>
+            <div class="label" data-i18n="your_ascendancy">Your ascendancy</div>
+            <div class="asc" id="ascName">—</div>
+            <div class="chr"><span data-i18n="character">Character</span>: <b id="chrName">—</b></div>
+          </div>
+        </div>
+        <hr>
+        <div class="label" data-i18n="nickname">Character nickname</div>
+        <div class="nick-row" style="margin-top:10px">
+          <div class="nick empty" id="nick" data-i18n="nick_empty">Generate a name for your exile</div>
+          <div class="nick-actions">
+            <button class="btn secondary" id="nickBtn" data-i18n="generate">Generate</button>
+            <button class="btn secondary" id="copyBtn" data-i18n="copy" disabled>Copy</button>
+          </div>
+        </div>
+        <div class="hint" data-i18n="nick_hint">3–23 characters, letters and underscores — fits Path of Exile naming rules.</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <span data-i18n="credits">Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org</span>
+  </footer>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+// Languages exactly as listed in the official pathofexile2.com language switcher.
+const LANGS = [
+  ["en_US","English"],["pt_BR","Português"],["ru_RU","Русский"],["th_TH","ไทย"],
+  ["de_DE","Deutsch"],["fr_FR","Français"],["es_ES","Español"],["ja_JP","日本語"],["ko_KR","한국어"]
+];
+
+// key = asset file name, base = character class, en = official English msgid.
+const CLASSES = [
+  {key:"titan",               base:"Warrior",   en:"Titan"},
+  {key:"warbringer",          base:"Warrior",   en:"Warbringer"},
+  {key:"smith-of-kitava",     base:"Warrior",   en:"Smith of Kitava"},
+  {key:"deadeye",             base:"Ranger",    en:"Deadeye"},
+  {key:"pathfinder",          base:"Ranger",    en:"Pathfinder"},
+  {key:"amazon",              base:"Huntress",  en:"Amazon"},
+  {key:"spirit-walker",       base:"Huntress",  en:"Spirit Walker"},
+  {key:"ritualist",           base:"Huntress",  en:"Ritualist"},
+  {key:"martial-artist",      base:"Monk",      en:"Martial Artist"},
+  {key:"invoker",             base:"Monk",      en:"Invoker"},
+  {key:"acolyte-of-chayula",  base:"Monk",      en:"Acolyte of Chayula"},
+  {key:"infernalist",         base:"Witch",     en:"Infernalist"},
+  {key:"blood-mage",          base:"Witch",     en:"Blood Mage"},
+  {key:"lich",                base:"Witch",     en:"Lich"},
+  {key:"abyssal-lich",        base:"Witch",     en:"Abyssal Lich", noBg:true},
+  {key:"stormweaver",         base:"Sorceress", en:"Stormweaver"},
+  {key:"chronomancer",        base:"Sorceress", en:"Chronomancer"},
+  {key:"disciple-of-varashta",base:"Sorceress", en:"Disciple of Varashta"},
+  {key:"tactician",           base:"Mercenary", en:"Tactician"},
+  {key:"witchhunter",         base:"Mercenary", en:"Witchhunter"},
+  {key:"gemling-legionnaire", base:"Mercenary", en:"Gemling Legionnaire"},
+  {key:"oracle",              base:"Druid",     en:"Oracle"},
+  {key:"shaman",              base:"Druid",     en:"Shaman"}
+];
+
+// Sector colours per character class.
+const BASE_COLORS = {
+  Warrior:["#6b2b1f","#4a1c14"], Ranger:["#3d5a2a","#27391a"], Huntress:["#5a6a2a","#3a441a"],
+  Monk:["#2c5a5e","#1b393c"], Witch:["#4a2a5e","#2d1a3a"], Sorceress:["#2c3f6e","#1a2645"],
+  Mercenary:["#5c4a22","#3a2e14"], Druid:["#2f5a3e","#1c3826"]
+};
+
+// Official translations, extracted from pathofexile2.com locale dictionaries.
+const NAMES = {
+ "pt_BR": {
+  "Witch": "Bruxa",
+  "Ranger": "Caçadora",
+  "Warrior": "Guerreiro",
+  "Sorceress": "Feiticeira",
+  "Mercenary": "Mercenário",
+  "Monk": "Monge",
+  "Huntress": "Caçadora",
+  "Druid": "Druida",
+  "Titan": "Titã",
+  "Warbringer": "Incitador",
+  "Smith of Kitava": "Ferreiro de Kitava",
+  "Deadeye": "Atiradora de Elite",
+  "Pathfinder": "Desbravadora",
+  "Infernalist": "Infernalista",
+  "Blood Mage": "Maga Sangrenta",
+  "Lich": "Lich",
+  "Abyssal Lich": "Lich Abissal",
+  "Stormweaver": "Tempesta",
+  "Chronomancer": "Cronomante",
+  "Disciple of Varashta": "Discípula de Varashta",
+  "Tactician": "Estrategista",
+  "Witchhunter": "Caçador de Bruxas",
+  "Gemling Legionnaire": "Legionário Gemante",
+  "Martial Artist": "Artista Marcial",
+  "Invoker": "Arcanista",
+  "Acolyte of Chayula": "Acólito de Chayula",
+  "Amazon": "Amazon",
+  "Spirit Walker": "Andarilha Espiritual",
+  "Ritualist": "Ritualista",
+  "Oracle": "Oráculo",
+  "Shaman": "Xamã"
+ },
+ "ru_RU": {
+  "Witch": "Ведьма",
+  "Ranger": "Охотница",
+  "Warrior": "Воин",
+  "Sorceress": "Чародейка",
+  "Mercenary": "Наёмник",
+  "Monk": "Монах",
+  "Huntress": "Копейщица",
+  "Druid": "Друид",
+  "Titan": "Титан",
+  "Warbringer": "Вестник войны",
+  "Smith of Kitava": "Кузнец Китавы",
+  "Deadeye": "Снайпер",
+  "Pathfinder": "Следопыт",
+  "Infernalist": "Инферналист",
+  "Blood Mage": "Маг крови",
+  "Lich": "Лич",
+  "Abyssal Lich": "Лич Бездны",
+  "Stormweaver": "Ткач бурь",
+  "Chronomancer": "Хрономант",
+  "Disciple of Varashta": "Ученица Варашты",
+  "Tactician": "Тактик",
+  "Witchhunter": "Охотник на ведьм",
+  "Gemling Legionnaire": "Легионер каменитов",
+  "Martial Artist": "Мастер боевых искусств",
+  "Invoker": "Заклинатель стихий",
+  "Acolyte of Chayula": "Служитель Чаюлы",
+  "Amazon": "Амазонка",
+  "Spirit Walker": "Ходящая среди духов",
+  "Ritualist": "Ритуалист",
+  "Oracle": "Оракул",
+  "Shaman": "Шаман"
+ },
+ "th_TH": {
+  "Witch": "Witch",
+  "Ranger": "Ranger",
+  "Warrior": "Warrior",
+  "Sorceress": "Sorceress",
+  "Mercenary": "Mercenary",
+  "Monk": "Monk",
+  "Huntress": "Huntress",
+  "Druid": "Druid",
+  "Titan": "Titan",
+  "Warbringer": "Warbringer",
+  "Smith of Kitava": "Smith of Kitava",
+  "Deadeye": "Deadeye",
+  "Pathfinder": "Pathfinder",
+  "Infernalist": "Infernalist",
+  "Blood Mage": "Blood Mage",
+  "Lich": "Lich",
+  "Abyssal Lich": "Abyssal Lich",
+  "Stormweaver": "Stormweaver",
+  "Chronomancer": "Chronomancer",
+  "Disciple of Varashta": "Disciple of Varashta",
+  "Tactician": "Tactician",
+  "Witchhunter": "Witchhunter",
+  "Gemling Legionnaire": "Gemling Legionnaire",
+  "Martial Artist": "Martial Artist",
+  "Invoker": "Invoker",
+  "Acolyte of Chayula": "Acolyte of Chayula",
+  "Amazon": "Amazon",
+  "Spirit Walker": "Spirit Walker",
+  "Ritualist": "Ritualist",
+  "Oracle": "Oracle",
+  "Shaman": "Shaman"
+ },
+ "de_DE": {
+  "Witch": "Hexe",
+  "Ranger": "Waldläuferin",
+  "Warrior": "Krieger",
+  "Sorceress": "Zauberin",
+  "Mercenary": "Söldner",
+  "Monk": "Mönch",
+  "Huntress": "Jägerin",
+  "Druid": "Druide",
+  "Titan": "Titan",
+  "Warbringer": "Kriegsbringer",
+  "Smith of Kitava": "Schmied von Kitava",
+  "Deadeye": "Scharfschützin",
+  "Pathfinder": "Pfadfinderin",
+  "Infernalist": "Infernalistin",
+  "Blood Mage": "Blutmagierin",
+  "Lich": "Lich",
+  "Abyssal Lich": "Abgründiger Lich",
+  "Stormweaver": "Sturmweberin",
+  "Chronomancer": "Chronomantin",
+  "Disciple of Varashta": "Jüngerin von Varashta",
+  "Tactician": "Taktiker",
+  "Witchhunter": "Hexenjäger",
+  "Gemling Legionnaire": "Gemmling-Legionär",
+  "Martial Artist": "Meister der Kampfkunst",
+  "Invoker": "Heraufbeschwörer",
+  "Acolyte of Chayula": "Akolyth von Chayula",
+  "Amazon": "Amazone",
+  "Spirit Walker": "Die Geistläuferin",
+  "Ritualist": "Ritualistin",
+  "Oracle": "Orakel",
+  "Shaman": "Schamane"
+ },
+ "fr_FR": {
+  "Witch": "Sorcière",
+  "Ranger": "Rôdeuse",
+  "Warrior": "Guerrier",
+  "Sorceress": "Magicienne",
+  "Mercenary": "Mercenaire",
+  "Monk": "Moine",
+  "Huntress": "Chasseresse",
+  "Druid": "Druide",
+  "Titan": "Titan",
+  "Warbringer": "Héraut de la guerre",
+  "Smith of Kitava": "Forgeron de Kitava",
+  "Deadeye": "Archère d'élite",
+  "Pathfinder": "Exploratrice",
+  "Infernalist": "Infernaliste",
+  "Blood Mage": "Mage de sang",
+  "Lich": "Liche",
+  "Abyssal Lich": "Liche abyssale",
+  "Stormweaver": "Tisseuse d'orages",
+  "Chronomancer": "Chronomancienne",
+  "Disciple of Varashta": "Disciple de Varashta",
+  "Tactician": "Tacticien",
+  "Witchhunter": "Chasseur de sorcières",
+  "Gemling Legionnaire": "Légionnaire Serti",
+  "Martial Artist": "Artiste martial",
+  "Invoker": "Évocateur",
+  "Acolyte of Chayula": "Acolyte de Chayula",
+  "Amazon": "Amazone",
+  "Spirit Walker": "Marcheuse spirituelle",
+  "Ritualist": "Ritualiste",
+  "Oracle": "Oracle",
+  "Shaman": "Chaman"
+ },
+ "es_ES": {
+  "Witch": "Bruja",
+  "Ranger": "Exploradora",
+  "Warrior": "Guerrero",
+  "Sorceress": "Hechicera",
+  "Mercenary": "Mercenario",
+  "Monk": "Monje",
+  "Huntress": "Cazadora",
+  "Druid": "Druida",
+  "Titan": "Titán",
+  "Warbringer": "Portador de guerra",
+  "Smith of Kitava": "Herrero de Kitava",
+  "Deadeye": "Tiradora",
+  "Pathfinder": "Rastreadora",
+  "Infernalist": "Infernalista",
+  "Blood Mage": "Maga de sangre",
+  "Lich": "Liche",
+  "Abyssal Lich": "Liche abisal",
+  "Stormweaver": "Tejetormentas",
+  "Chronomancer": "Cronomante",
+  "Disciple of Varashta": "Discípula de Varashta",
+  "Tactician": "Estratega",
+  "Witchhunter": "Cazador de brujas",
+  "Gemling Legionnaire": "Legionario gemita",
+  "Martial Artist": "Artista marcial",
+  "Invoker": "Invocador",
+  "Acolyte of Chayula": "Acólito de Chayula",
+  "Amazon": "Amazona",
+  "Spirit Walker": "Caminante espiritual",
+  "Ritualist": "Ritualista",
+  "Oracle": "Oráculo",
+  "Shaman": "Chamán"
+ },
+ "ja_JP": {
+  "Witch": "ウィッチ",
+  "Ranger": "レンジャー",
+  "Warrior": "ウォーリアー",
+  "Sorceress": "ソーサレス",
+  "Mercenary": "マーセナリー",
+  "Monk": "モンク",
+  "Huntress": "ハントレス",
+  "Druid": "ドルイド",
+  "Titan": "タイタン",
+  "Warbringer": "ウォーブリンガー",
+  "Smith of Kitava": "スミスオブキタヴァ",
+  "Deadeye": "デッドアイ",
+  "Pathfinder": "パスファインダー",
+  "Infernalist": "インファーナリスト",
+  "Blood Mage": "ブラッドメイジ",
+  "Lich": "リッチ",
+  "Abyssal Lich": "アビサルリッチ",
+  "Stormweaver": "ストームウィーバー",
+  "Chronomancer": "クロノマンサー",
+  "Disciple of Varashta": "ディサイプルオブヴァラシュタ",
+  "Tactician": "タクティシャン",
+  "Witchhunter": "ウィッチハンター",
+  "Gemling Legionnaire": "ジェムリングリージョネア",
+  "Martial Artist": "マーシャルアーティスト",
+  "Invoker": "インヴォーカー",
+  "Acolyte of Chayula": "アコライトオブチャユラ",
+  "Amazon": "アマゾン",
+  "Spirit Walker": "スピリットウォーカー",
+  "Ritualist": "リチュアリスト",
+  "Oracle": "オラクル",
+  "Shaman": "シャーマン"
+ },
+ "ko_KR": {
+  "Witch": "위치",
+  "Ranger": "레인저",
+  "Warrior": "워리어",
+  "Sorceress": "소서리스",
+  "Mercenary": "용병",
+  "Monk": "몽크",
+  "Huntress": "헌트리스",
+  "Druid": "드루이드",
+  "Titan": "타이탄",
+  "Warbringer": "워브링어",
+  "Smith of Kitava": "스미스 오브 키타바",
+  "Deadeye": "데드아이",
+  "Pathfinder": "패스파인더",
+  "Infernalist": "인퍼널리스트",
+  "Blood Mage": "블러드 메이지",
+  "Lich": "리치",
+  "Abyssal Lich": "심연의 리치",
+  "Stormweaver": "스톰위버",
+  "Chronomancer": "크로노맨서",
+  "Disciple of Varashta": "디사이플 오브 바라시타",
+  "Tactician": "택티션",
+  "Witchhunter": "위치헌터",
+  "Gemling Legionnaire": "젬링 리저네어",
+  "Martial Artist": "마셜 아티스트",
+  "Invoker": "인보커",
+  "Acolyte of Chayula": "애컬라이트 오브 차율라",
+  "Amazon": "아마존",
+  "Spirit Walker": "스피릿 워커",
+  "Ritualist": "리추얼리스트",
+  "Oracle": "오라클",
+  "Shaman": "샤먼"
+ }
+};
+
+// UI strings.
+const UI = {
+  en_US:{title:"PoE2 Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names from the official site pathofexile2.com · Art from poe2db.tw · Randomness from random.org"},
+  ru_RU:{title:"Рулетка подклассов PoE2",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов с официального сайта pathofexile2.com · Арты с poe2db.tw · Случайность от random.org"},
+  de_DE:{title:"PoE2 Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen von der offiziellen Seite pathofexile2.com · Artworks von poe2db.tw · Zufall von random.org"},
+  fr_FR:{title:"Roulette des ascendances PoE2",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes issus du site officiel pathofexile2.com · Illustrations de poe2db.tw · Aléatoire par random.org"},
+  es_ES:{title:"Ruleta de ascendencias PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases del sitio oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedad de random.org"},
+  pt_BR:{title:"Roleta de Ascendências PoE2",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes do site oficial pathofexile2.com · Arte de poe2db.tw · Aleatoriedade de random.org"},
+  th_TH:{title:"รูเล็ตต์คลาสรอง PoE2",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสจากเว็บไซต์ทางการ pathofexile2.com · ภาพจาก poe2db.tw · การสุ่มจาก random.org"},
+  ja_JP:{title:"PoE2 アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名は公式サイト pathofexile2.com より · アートは poe2db.tw より · 乱数は random.org より"},
+  ko_KR:{title:"PoE2 전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름은 공식 사이트 pathofexile2.com · 아트는 poe2db.tw · 난수는 random.org 제공"}
+};
+
+/* ============ NICKNAME GENERATOR POOLS ============ */
+const NICK = {
+  roots:["Kael","Vor","Tal","Mor","Ash","Rav","Sil","Thar","Dra","Ely","Nyx","Gor","Zeph","Kor","Vael","Ser","Ith","Bran","Cael","Dorn","Fen","Grim","Hal","Isk","Jor","Kyr","Lor","Mal","Nar","Ori","Pyr","Quil","Rhun","Sar","Tor","Ulf","Var","Wyn","Xan","Yor","Zar","Ael","Bel","Cyr","Dun","Erv","Fal","Gal","Hex","Ing","Jun","Kas","Lun","Mir","Nol","Oth","Per","Ros","Syl","Tem","Ur","Vex","Wren","Yv","Zol"],
+  suffixes:["dor","gath","ion","ara","eth","wyn","mir","ric","vas","ith","ael","orn","us","ia","an","en","ok","ax","is","ur","oth","ys","ar","il","on","ath","iel","ek","ov","ex"],
+  prefixes:["Ash","Black","Grim","Iron","Storm","Blood","Night","Shadow","Frost","Ember","Void","Sun","Moon","Gale","Rune","Grave","Hollow","Thorn","Crimson","Silent","Wild","Bone","Dusk","Dawn","Pale"],
+  epithets:{
+    Warrior:["Ironhide","Stonefist","Titanborn","Wallbreaker","Earthshaker","Oxheart","Hammerhand","Bulwark","Quakeborn","Ironjaw"],
+    Ranger:["Deadeye","Swiftarrow","Farshot","Windrunner","Hawkeye","Quiverborn","Trailwalker","Sharpeye","Longshot","Fleetfoot"],
+    Huntress:["Spearmaiden","Wildheart","Beastcaller","Spiritbound","Thornspear","Bloodhunt","Fangthrower","Rainsong","Skyspear","Mistwalker"],
+    Monk:["Stillmind","Ironpalm","Bellstriker","Breachwalker","Stormfist","Quietstep","Voidtouched","Sunpalm","Thunderheel","Mantra"],
+    Witch:["Gravewhisper","Soulbinder","Hexweaver","Bonecaller","Ashenveil","Nightcrown","Bloodquill","Lichborn","Cursemaw","Emberwitch"],
+    Sorceress:["Stormcaller","Frostveil","Spellblade","Timebender","Skyweaver","Emberdancer","Sandveil","Glassmind","Starcaller","Arcshaper"],
+    Mercenary:["Gunhand","Coinblade","Grenadier","Crossfire","Steelheart","Warsmith","Ironsight","Sellsword","Gemborn","Quickdraw"],
+    Druid:["Oakheart","Moonhowl","Stormbear","Rootcaller","Wildshape","Thunderhide","Owlseer","Stagborn","Ashgrove","Skyfang"]
+  }
+};
+
+/* ===================== STATE ===================== */
+const $ = s => document.querySelector(s);
+const canvas = $("#wheel"), ctx = canvas.getContext("2d");
+const N = CLASSES.length, STEP = 2*Math.PI/N;
+let lang = "en_US", rotation = 0, spinning = false, current = null, nickname = "", bgToggle = false;
+
+/* ===================== I18N ===================== */
+function t(k){ return (UI[lang] && UI[lang][k]) || UI.en_US[k] || k; }
+function nameOf(en){ return lang==="en_US" ? en : ((NAMES[lang]||{})[en] || en); }
+function applyLang(){
+  document.documentElement.lang = lang.split("_")[0];
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    const k = el.dataset.i18n;
+    if(k==="nick_empty" && nickname) return;
+    if(k==="spin" && spinning){ el.textContent = t("spinning"); return; }
+    el.textContent = t(k);
+  });
+  document.title = t("title");
+  if(current) showResult(current, false);
+  drawWheel();
+  try{ localStorage.setItem("poe2-lang", lang);}catch(e){}
+}
+
+/* ===================== WHEEL ===================== */
+function fitFont(text, maxWidth, size, family, weight){
+  ctx.font = `${weight} ${size}px ${family}`;
+  while(size>9 && ctx.measureText(text).width>maxWidth){ size -= .5; ctx.font = `${weight} ${size}px ${family}`; }
+  return size;
+}
+function drawWheel(){
+  const W = canvas.width, R = W/2, cx = R, cy = R;
+  ctx.clearRect(0,0,W,W);
+  // outer rim
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,R-2,0,2*Math.PI); ctx.fillStyle="#1a1410"; ctx.fill();
+  ctx.restore();
+  const rOut = R-14, rIn = R*0.17;
+  const fontHead = getComputedStyle(document.documentElement).getPropertyValue("--font-head");
+  const fontBody = getComputedStyle(document.documentElement).getPropertyValue("--font-body");
+  CLASSES.forEach((c,i)=>{
+    const a0 = i*STEP, a1 = a0+STEP;
+    const [c1,c2] = BASE_COLORS[c.base];
+    const g = ctx.createRadialGradient(cx,cy,rIn,cx,cy,rOut);
+    g.addColorStop(0,c1); g.addColorStop(1,c2);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,rOut,a0,a1); ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = "rgba(200,170,110,.55)"; ctx.lineWidth = 2; ctx.stroke();
+
+    // labels along the radius
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(a0+STEP/2);
+    ctx.textAlign="right"; ctx.textBaseline="middle";
+    const maxW = rOut - rIn - 60;
+    const asc = nameOf(c.en), chr = nameOf(c.base);
+    const s1 = fitFont(asc, maxW, 30, fontHead, "700");
+    ctx.fillStyle="#efe6d3"; ctx.shadowColor="rgba(0,0,0,.9)"; ctx.shadowBlur=6;
+    ctx.fillText(asc, rOut-28, -12);
+    const s2 = fitFont(chr, maxW, 21, fontBody, "500");
+    ctx.fillStyle="rgba(230,207,148,.95)";
+    ctx.fillText(chr, rOut-28, 16);
+    ctx.restore();
+  });
+  // rim ring
+  ctx.beginPath(); ctx.arc(cx,cy,rOut,0,2*Math.PI); ctx.strokeStyle="#c8aa6e"; ctx.lineWidth=8; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,R-4,0,2*Math.PI); ctx.strokeStyle="#5a4520"; ctx.lineWidth=4; ctx.stroke();
+  // studs
+  for(let i=0;i<N;i++){
+    const a=i*STEP; ctx.beginPath(); ctx.arc(cx+Math.cos(a)*rOut, cy+Math.sin(a)*rOut, 7, 0, 2*Math.PI);
+    ctx.fillStyle="#e6cf94"; ctx.fill(); ctx.strokeStyle="#3a2c14"; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+function setRotation(deg){ rotation = deg; canvas.style.transform = `rotate(${deg}deg)`; }
+function easeOut(x){ return 1 - Math.pow(1-x, 4); }
+function animateTo(target, dur){
+  return new Promise(res=>{
+    const start = rotation, delta = target-start, t0 = performance.now();
+    (function frame(now){
+      const p = Math.min(1,(now-t0)/dur);
+      setRotation(start + delta*easeOut(p));
+      p<1 ? requestAnimationFrame(frame) : res();
+    })(t0);
+  });
+}
+
+/* ===================== RANDOM.ORG ===================== */
+// Plain-text HTTP API of random.org; CORS-enabled. Returns array of integers in [min,max].
+async function randomOrg(num, min, max, timeoutMs=8000){
+  const url = `https://www.random.org/integers/?num=${num}&min=${min}&max=${max}&col=1&base=10&format=plain&rnd=new`;
+  const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), timeoutMs);
+  try{
+    const r = await fetch(url, {signal: ctl.signal, cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const txt = await r.text();
+    const nums = txt.trim().split(/\s+/).map(Number);
+    if(nums.length!==num || nums.some(n=>!Number.isInteger(n)||n<min||n>max)) throw new Error("bad payload");
+    return nums;
+  } finally { clearTimeout(tm); }
+}
+function localRandom(num, min, max){
+  const out=[], range=max-min+1, buf=new Uint32Array(num); crypto.getRandomValues(buf);
+  for(let i=0;i<num;i++) out.push(min + (buf[i] % range));
+  return out;
+}
+async function getRandom(num, min, max){
+  try{ return {nums: await randomOrg(num,min,max), source:"random.org"}; }
+  catch(e){ console.warn("random.org failed, falling back:", e); return {nums: localRandom(num,min,max), source:"local"}; }
+}
+function setStatus(kind, key){
+  const d=$("#dot"); d.className="dot "+kind;
+  const s=$("#statusText"); s.dataset.i18n=key; s.textContent=t(key);
+}
+
+/* ===================== SPIN ===================== */
+async function spin(){
+  if(spinning) return;
+  spinning = true;
+  $("#spinBtn").disabled = true; $("#hub").classList.add("busy");
+  document.querySelectorAll('[data-i18n="spin"]').forEach(el=>el.textContent=t("spinning"));
+  setStatus("busy","status_fetch");
+
+  // one call: [sector index, jitter within sector, extra full turns]
+  const {nums, source} = await getRandom(3, 0, 9999);
+  const idx = nums[0] % N;
+  const jitter = (nums[1]/9999 - .5) * 0.8;   // -0.4..0.4 of a sector
+  const turns = 5 + (nums[2] % 3);            // 5..7 full turns
+  setStatus(source==="random.org"?"ok":"warn", source==="random.org"?"status_ok":"status_fallback");
+
+  const cls = CLASSES[idx];
+  preloadBg(cls);
+
+  // pointer is at top (-90deg). Sector centre (deg) = idx*step + step/2 (canvas angle, clockwise from +x).
+  const stepDeg = 360/N;
+  const centre = idx*stepDeg + stepDeg/2 + jitter*stepDeg;
+  const base = ((rotation % 360) + 360) % 360;
+  let target = -90 - centre;                   // rotation needed (mod 360)
+  target = ((target % 360) + 360) % 360;
+  const delta = ((target - base) % 360 + 360) % 360;
+  await animateTo(rotation + delta + 360*turns, 5200 + (nums[2]%3)*400);
+
+  current = cls; nickname = "";
+  showResult(cls, true);
+  spinning = false;
+  $("#spinBtn").disabled = false; $("#hub").classList.remove("busy");
+  document.querySelectorAll('[data-i18n="spin"]').forEach(el=>el.textContent=t("spin"));
+}
+
+/* ===================== RESULT / BACKGROUND ===================== */
+function bgUrl(c){ return c.noBg ? `assets/art/${c.key}.webp` : `assets/bg/${c.key}.webp`; }
+function preloadBg(c){ const im=new Image(); im.src=bgUrl(c); im.decoding="async"; }
+function swapBackground(c){
+  const a=$("#bgA"), b=$("#bgB");
+  const next = bgToggle ? a : b, prev = bgToggle ? b : a; bgToggle = !bgToggle;
+  const im = new Image();
+  im.onload = ()=>{
+    next.style.backgroundImage = `url("${bgUrl(c)}")`;
+    next.style.backgroundSize = c.noBg ? "contain" : "cover";
+    next.style.backgroundColor = "#0b0a09";
+    next.classList.add("show"); prev.classList.remove("show");
+  };
+  im.src = bgUrl(c);
+}
+function showResult(c, changeBg){
+  $("#ascName").textContent = nameOf(c.en);
+  $("#chrName").textContent = nameOf(c.base);
+  $("#medal").src = `assets/art/${c.key}.webp`;
+  $("#medal").alt = c.en;
+  $("#result").classList.add("show");
+  const nk=$("#nick");
+  if(nickname){ nk.textContent = nickname; nk.classList.remove("empty"); $("#copyBtn").disabled=false; }
+  else { nk.textContent = t("nick_empty"); nk.classList.add("empty"); $("#copyBtn").disabled=true; }
+  $("#copyBtn").textContent = t("copy");
+  if(changeBg) swapBackground(c);
+}
+
+/* ===================== NICKNAME ===================== */
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
+function buildNick(r, base){
+  const P=NICK.prefixes, Rt=NICK.roots, S=NICK.suffixes, E=NICK.epithets[base]||[];
+  const root = Rt[r[0]%Rt.length], suf = S[r[1]%S.length], pre = P[r[2]%P.length], ep = E[r[3]%E.length], root2 = Rt[r[4]%Rt.length];
+  const pattern = r[5] % 6;
+  let name;
+  switch(pattern){
+    case 0: name = cap(root+suf); break;                          // Kaeldor
+    case 1: name = cap(pre)+root.toLowerCase()+suf; break;          // Ashkaeldor
+    case 2: name = cap(root+suf)+"_"+ep; break;                     // Kaeldor_Ironhide
+    case 3: name = cap(pre)+"_"+cap(root+suf); break;               // Grim_Kaeldor
+    case 4: name = cap(root)+root2.toLowerCase()+suf; break;        // Kaelvordor
+    default: name = ep+"_"+cap(root+suf); break;                    // Ironhide_Kaeldor
+  }
+  name = name.replace(/[^A-Za-z_]/g,"");
+  if(name.length>23) name = name.slice(0,23).replace(/_+$/,"");
+  if(name.length<3) name = cap(root+suf+suf);
+  return name;
+}
+async function genNick(){
+  if(!current) return;
+  const btn=$("#nickBtn"); btn.disabled=true; setStatus("busy","status_fetch");
+  const {nums, source} = await getRandom(6, 0, 9999);
+  setStatus(source==="random.org"?"ok":"warn", source==="random.org"?"status_ok":"status_fallback");
+  nickname = buildNick(nums, current.base);
+  const nk=$("#nick"); nk.textContent=nickname; nk.classList.remove("empty");
+  $("#copyBtn").disabled=false; $("#copyBtn").textContent=t("copy");
+  btn.disabled=false;
+}
+async function copyNick(){
+  if(!nickname) return;
+  try{ await navigator.clipboard.writeText(nickname); }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=nickname; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  const b=$("#copyBtn"); b.textContent=t("copied"); setTimeout(()=>b.textContent=t("copy"),1500);
+}
+
+/* ===================== INIT ===================== */
+(function init(){
+  const sel=$("#lang");
+  LANGS.forEach(([code,label])=>{ const o=document.createElement("option"); o.value=code; o.textContent=label; sel.appendChild(o); });
+  let saved=null; try{ saved=localStorage.getItem("poe2-lang"); }catch(e){}
+  if(!saved){
+    const nav=(navigator.language||"en").toLowerCase();
+    saved = LANGS.map(l=>l[0]).find(c=>nav.startsWith(c.slice(0,2))) || "en_US";
+  }
+  lang = LANGS.some(l=>l[0]===saved) ? saved : "en_US";
+  sel.value=lang;
+  sel.addEventListener("change", ()=>{ lang=sel.value; applyLang(); });
+  $("#spinBtn").addEventListener("click", spin);
+  $("#hub").addEventListener("click", spin);
+  $("#hub").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); spin(); } });
+  $("#nickBtn").addEventListener("click", genNick);
+  $("#copyBtn").addEventListener("click", copyNick);
+  applyLang();
+  // redraw once web fonts are ready so Cinzel is used on the wheel
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawWheel);
+})();
+</script>
+</body>
+</html>
