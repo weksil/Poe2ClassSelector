@@ -14,11 +14,35 @@ One-page site: a roulette wheel that picks an ascendancy class and generates a c
 - The sparkle button turns the effects off: no bursts, no confetti, no labels, no shake, and whatever is in the air at that moment is cleared. It is remembered too, and the browser's reduced-motion setting still turns the particles off on its own.
 - The pointer is hinged at its base and rides the sectors like the flapper of a peg wheel: an edge drags it along the way the wheel turns, a spring pulls it back once the edge clears, and on the way back it slaps against the rim instead of swinging freely, in step with the clack. It rides held over while the wheel is fast and flicks once per sector as it slows. The knock is the same event as the sound, so the pointer keeps swinging with the sound muted; only reduced-motion turns it off.
 - The wheel line-up is editable: the panel lists every class of the active game, clicking one takes it off the wheel or puts it back. Two always stay on, and the choice is kept per game between visits.
-- Language selector with the 9 languages of the official language switcher on pathofexile2.com. The chosen game, language, mode and minimum spin are remembered between visits.
+- Language selector with the 9 languages of the official language switcher on pathofexile2.com.
 - Randomness comes from the random.org HTTP API (true random numbers). If random.org is unreachable, the page falls back to `crypto.getRandomValues` and says so in the status line.
 - The wheel starts turning on the click itself: it spins freely while random.org is being asked, then brakes onto the drawn sector, so the button never feels like it is waiting for the network. The sector is drawn on the wheel as it currently stands, so a knocked-out one can never come up again.
 - Nickname generator builds Path-of-Exile-compatible names (3–23 characters, letters and underscores), flavoured by the rolled character class.
 - The result card draws the ascendancy passive tree the way poe2db and poedb do: the round class art with the nodes and their connections on top. Hovering or tapping a node opens a Path-of-Exile-style tooltip with its name and effect in the selected language.
+
+## Settings and privacy
+
+Language, game, mode, minimum spin, sound, effects and the per-game wheel line-up all survive between
+visits. They live in one `localStorage` entry, `poe-roulette-prefs`, and nowhere else: no cookies, no
+identifier, no third-party storage, nothing sent anywhere. An earlier visit's one-key-per-setting
+layout is folded into it on first load and the old keys are removed.
+
+This is storage of preferences the user asked for, which under the ePrivacy rules needs no consent
+banner — so there is none, and the page is built to keep it that way:
+
+- Nothing is written until the user actually changes something. A first visit stores nothing at all;
+  a language merely guessed from the browser is applied but never saved.
+- Only the user's own choices are kept. The single timestamp in the entry exists to expire it and for
+  nothing else — no identifier, no history, no counters.
+- The entry is dropped on the next load once it is a year untouched.
+- The footer says in every language what is kept and where, and clears it on request.
+- Storage that is blocked — private mode, a locked-down browser — is not an error: the page runs on
+  its defaults.
+
+The page still asks three third parties for things over the network: random.org for the draw,
+decapi.me or unavatar.io for the channel picture, and Google Fonts for the two typefaces. Those are
+requests, not storage, but they do show the visitor's IP to those hosts. Self-hosting the fonts would
+be the one that removes a third party for every visitor.
 
 ## Data
 
