@@ -32,7 +32,23 @@ body{position:relative;overflow-x:hidden}
 .page{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 28px;flex-wrap:wrap}
 h1{font-family:var(--font-head);font-weight:700;letter-spacing:.06em;font-size:clamp(18px,2.4vw,28px);margin:0;color:var(--gold-2);text-shadow:0 2px 12px rgba(0,0,0,.8)}
+.head-left{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
 .head-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+/* a shout-out to the channel this was built for */
+.shout{display:inline-flex;align-items:center;gap:11px;text-decoration:none;white-space:nowrap;
+  font-size:16px;letter-spacing:.02em;color:var(--text);padding:9px 18px 9px 11px;border-radius:999px;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(145,70,255,.18),rgba(12,10,8,.85));
+  box-shadow:0 6px 20px rgba(0,0,0,.55);transition:color .15s,border-color .15s,box-shadow .2s,transform .1s}
+.shout-ico{position:relative;width:30px;height:30px;flex:none}
+.shout-ico svg{width:30px;height:30px;display:block;color:#9146ff;filter:drop-shadow(0 0 6px rgba(145,70,255,.6));transition:opacity .4s ease}
+.shout-ico img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;background:#0b0a09;
+  border:1px solid rgba(145,70,255,.85);box-shadow:0 0 10px rgba(145,70,255,.45);opacity:0;transition:opacity .4s ease}
+.shout-ico.has-ava img{opacity:1}
+.shout-ico.has-ava svg{opacity:0}
+.shout b{color:var(--gold-2);font-weight:600}
+.shout:hover{color:var(--text);border-color:rgba(145,70,255,.75);box-shadow:0 6px 24px rgba(145,70,255,.35)}
+.shout:active{transform:translateY(1px)}
+.shout:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .lang{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
 .games{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:rgba(12,10,8,.85)}
 .game{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;letter-spacing:.02em;
@@ -178,7 +194,16 @@ footer a:hover{text-decoration:underline}
 
 <div class="page">
   <header>
-    <h1 data-i18n="title">Ascendancy Roulette</h1>
+    <div class="head-left">
+      <h1 data-i18n="title">Ascendancy Roulette</h1>
+      <a class="shout" href="https://www.twitch.tv/blindermine" target="_blank" rel="noopener noreferrer">
+        <span class="shout-ico">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+          <img id="shoutAva" alt="" width="30" height="30" decoding="async">
+        </span>
+        <span>special for <b>blindermine</b></span>
+      </a>
+    </div>
     <div class="head-right">
       <div class="games" role="group" aria-label="Game">
         <button type="button" class="game" data-game="poe2" aria-pressed="true">Path of Exile 2</button>
@@ -887,6 +912,29 @@ async function switchGame(id){
   finally{ btns.forEach(b=>b.disabled = false); }
 }
 
+/* ===================== CHANNEL AVATAR ===================== */
+// The badge shows the channel's own Twitch picture. decapi answers with the current CDN url as
+// plain text; unavatar serves a picture directly. Both are optional — the glyph stays if neither
+// answers, so the badge never waits on a third party.
+const AVATAR_URL = "https://decapi.me/twitch/avatar/blindermine";
+const AVATAR_IMG = "https://unavatar.io/twitch/blindermine";
+function tryImg(img, url){ return new Promise(res=>{ img.onload=()=>res(true); img.onerror=()=>res(false); img.src=url; }); }
+async function loadChannelAvatar(){
+  const box = $(".shout-ico"), img = $("#shoutAva"); if(!box || !img) return;
+  let cdn = null;
+  try{
+    const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 6000);
+    try{
+      const r = await fetch(AVATAR_URL, {signal: ctl.signal});
+      const txt = (await r.text()).trim();
+      if(r.ok && /^https:\/\/static-cdn\.jtvnw\.net\/[\w.\/-]+$/.test(txt)) cdn = txt;   // anything else is an error message
+    } finally { clearTimeout(tm); }
+  }catch(e){ console.warn("channel avatar lookup failed:", e); }
+  if(cdn && await tryImg(img, cdn)){ box.classList.add("has-ava"); return; }
+  if(await tryImg(img, AVATAR_IMG)) box.classList.add("has-ava");
+  else img.removeAttribute("src");
+}
+
 /* ===================== INIT ===================== */
 function clampSec(v){ return Number.isFinite(v) ? Math.max(2, Math.min(60, Math.round(v*2)/2)) : 4; }
 (async function init(){
@@ -916,6 +964,7 @@ function clampSec(v){ return Number.isFinite(v) ? Math.max(2, Math.min(60, Math.
     b.addEventListener("click", ()=>setMode(b.dataset.mode));
   });
   fxSize(); window.addEventListener("resize", fxSize);
+  loadChannelAvatar();
   $("#spinBtn").addEventListener("click", spin);
   $("#hub").addEventListener("click", spin);
   canvas.addEventListener("click", spin);
