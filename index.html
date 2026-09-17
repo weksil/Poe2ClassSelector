@@ -67,7 +67,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,46
 /* ---- wheel ---- */
 .wheel-wrap{position:relative;width:min(92vw,640px);aspect-ratio:1;margin:0 auto;filter:drop-shadow(0 20px 50px rgba(0,0,0,.8))}
 canvas#wheel{width:100%;height:100%;display:block;border-radius:50%;will-change:transform}
-.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);transform-origin:50% 0;will-change:transform;width:0;height:0;
   border-left:18px solid transparent;border-right:18px solid transparent;border-top:40px solid var(--gold-2);
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.9));z-index:3}
 .pointer::after{content:"";position:absolute;left:-12px;top:-40px;border-left:12px solid transparent;border-right:12px solid transparent;border-top:28px solid #7a5a22}
@@ -144,12 +144,22 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .secs{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px}
 .secs input{width:62px;background:rgba(0,0,0,.45);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 8px;font:inherit;text-align:center}
 .secs input:focus{outline:2px solid var(--gold);outline-offset:1px}
+.snd{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;cursor:pointer;
+  border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.35);color:var(--gold-2);transition:color .15s,border-color .15s,background .15s}
+.snd:hover{border-color:var(--gold);background:rgba(90,69,32,.45)}
+.snd:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.snd svg{width:19px;height:19px}
+.snd .wave{transition:opacity .15s}
+.snd .slash{opacity:0;transition:opacity .15s}
+.snd.off{color:var(--muted)}
+.snd.off .wave{opacity:0}
+.snd.off .slash{opacity:1}
 /* ---- the line-up: which classes sit on the wheel ---- */
 .roster{margin:0 0 14px}
 .roster>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);
   padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.35);transition:color .15s,border-color .15s}
 .roster>summary::-webkit-details-marker{display:none}
-.roster>summary::before{content:"B8";color:var(--gold);transition:transform .15s}
+.roster>summary::before{content:"▸";color:var(--gold);transition:transform .15s}
 .roster[open]>summary::before{transform:rotate(90deg)}
 .roster>summary:hover{color:var(--text);border-color:rgba(200,170,110,.6)}
 .roster>summary b{margin-left:auto;color:var(--gold-2);font-family:var(--font-head);font-size:14px;font-weight:700}
@@ -254,6 +264,13 @@ footer a:hover{text-decoration:underline}
           <input type="number" id="minSec" min="2" max="60" step="0.5" value="4" inputmode="decimal">
           <span data-i18n="sec">s</span>
         </label>
+        <button type="button" class="snd" id="sndBtn" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor" stroke="none"/>
+            <path class="wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.7 7.7 0 0 1 0 10.8"/>
+            <path class="slash" d="M15.5 9.5l5 5m0-5l-5 5"/>
+          </svg>
+        </button>
       </div>
       <details class="roster" id="roster">
         <summary><span data-i18n="roster">Wheel line-up</span> <b id="rosterCount">0 / 0</b></summary>
@@ -344,15 +361,15 @@ const BASE_COLORS = {
 };
 
 const UI = {
-  en_US:{roster:"Wheel line-up",roster_hint:"Click a name to take it off the wheel; at least two always stay on.",roster_reset:"Put all back",mode_single:"Single roll",mode_elim:"Elimination",min_spin:"Minimum spin",sec:"s",spin_again:"Spin again",restart:"Start over",remaining:"Remaining",eliminated:"Knocked out",winner:"Winner",elim_hint:"Every spin knocks the sector under the pointer off the wheel. Click to spin again.",ascendancy_short:"Ascendancy",tree_hint:"Hover or tap a node to read what it does",nodes:"Ascendancy passives",title:"Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names and art from pathofexile2.com, poe2db.tw and poedb.tw · Randomness from random.org"},
-  ru_RU:{roster:"Состав колеса",roster_hint:"Нажмите на имя, чтобы убрать его с колеса; двое всегда остаются.",roster_reset:"Вернуть всех",mode_single:"Один бросок",mode_elim:"На выбывание",min_spin:"Минимум вращения",sec:"с",spin_again:"Крутить снова",restart:"Начать заново",remaining:"Осталось",eliminated:"Выбывает",winner:"Победитель",elim_hint:"Каждое вращение выбивает с колеса сектор под указателем. Кликните, чтобы крутить снова.",ascendancy_short:"Подкласс",tree_hint:"Наведите курсор или коснитесь узла, чтобы прочитать описание",nodes:"Пассивные умения подкласса",title:"Рулетка подклассов",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов и арты с pathofexile2.com, poe2db.tw и poedb.tw · Случайность от random.org"},
-  de_DE:{roster:"Rad-Aufstellung",roster_hint:"Klicke einen Namen an, um ihn vom Rad zu nehmen; mindestens zwei bleiben immer.",roster_reset:"Alle zurückstellen",mode_single:"Einzelwurf",mode_elim:"K.-o.-Modus",min_spin:"Mindestdauer",sec:"s",spin_again:"Nochmal drehen",restart:"Neu starten",remaining:"Verbleibend",eliminated:"Ausgeschieden",winner:"Sieger",elim_hint:"Jede Drehung wirft den Sektor unter dem Zeiger aus dem Rad. Zum erneuten Drehen klicken.",ascendancy_short:"Aufstiegsklasse",tree_hint:"Knoten anfahren oder antippen, um ihn zu lesen",nodes:"Aufstiegs-Passivfertigkeiten",title:"Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen und Artworks von pathofexile2.com, poe2db.tw und poedb.tw · Zufall von random.org"},
-  fr_FR:{roster:"Composition de la roue",roster_hint:"Cliquez sur un nom pour le retirer de la roue ; il en reste toujours deux.",roster_reset:"Tout remettre",mode_single:"Tirage simple",mode_elim:"Élimination",min_spin:"Durée minimale",sec:"s",spin_again:"Tourner encore",restart:"Recommencer",remaining:"Restants",eliminated:"Éliminé",winner:"Gagnant",elim_hint:"Chaque tour élimine le secteur sous le pointeur. Cliquez pour relancer.",ascendancy_short:"Ascendance",tree_hint:"Survolez ou touchez un nœud pour lire son effet",nodes:"Passifs d'ascendance",title:"Roulette des ascendances",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes et illustrations de pathofexile2.com, poe2db.tw et poedb.tw · Aléatoire par random.org"},
-  es_ES:{roster:"Participantes de la ruleta",roster_hint:"Haz clic en un nombre para quitarlo de la ruleta; siempre quedan al menos dos.",roster_reset:"Devolver todos",mode_single:"Tirada única",mode_elim:"Eliminación",min_spin:"Giro mínimo",sec:"s",spin_again:"Girar de nuevo",restart:"Empezar de nuevo",remaining:"Restantes",eliminated:"Eliminado",winner:"Ganador",elim_hint:"Cada giro elimina el sector bajo el puntero. Haz clic para girar otra vez.",ascendancy_short:"Ascendencia",tree_hint:"Pasa el cursor o toca un nodo para leerlo",nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases y arte de pathofexile2.com, poe2db.tw y poedb.tw · Aleatoriedad de random.org"},
-  pt_BR:{roster:"Participantes da roleta",roster_hint:"Clique em um nome para tirá-lo da roleta; sempre ficam pelo menos dois.",roster_reset:"Devolver todos",mode_single:"Giro único",mode_elim:"Eliminação",min_spin:"Giro mínimo",sec:"s",spin_again:"Girar de novo",restart:"Começar de novo",remaining:"Restantes",eliminated:"Eliminado",winner:"Vencedor",elim_hint:"Cada giro elimina o setor sob o ponteiro. Clique para girar de novo.",ascendancy_short:"Ascendência",tree_hint:"Passe o cursor ou toque em um nó para ler",nodes:"Passivas de ascendência",title:"Roleta de Ascendências",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes e arte de pathofexile2.com, poe2db.tw e poedb.tw · Aleatoriedade de random.org"},
-  th_TH:{roster:"รายชื่อบนวงล้อ",roster_hint:"คลิกชื่อเพื่อเอาออกจากวงล้อ โดยจะเหลืออย่างน้อยสองรายการเสมอ",roster_reset:"นำกลับทั้งหมด",mode_single:"หมุนครั้งเดียว",mode_elim:"หมุนคัดออก",min_spin:"เวลาหมุนขั้นต่ำ",sec:"วิ",spin_again:"หมุนอีกครั้ง",restart:"เริ่มใหม่",remaining:"เหลืออยู่",eliminated:"ตกรอบ",winner:"ผู้ชนะ",elim_hint:"การหมุนแต่ละครั้งจะคัดช่องที่อยู่ใต้ตัวชี้ออก คลิกเพื่อหมุนอีกครั้ง",ascendancy_short:"คลาสรอง",tree_hint:"วางเมาส์หรือแตะที่โหนดเพื่ออ่านรายละเอียด",nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสและภาพจาก pathofexile2.com, poe2db.tw และ poedb.tw · การสุ่มจาก random.org"},
-  ja_JP:{roster:"ホイールの顔ぶれ",roster_hint:"名前をクリックするとホイールから外せます。最低2つは残ります。",roster_reset:"すべて戻す",mode_single:"1回抽選",mode_elim:"勝ち抜き戦",min_spin:"最短回転時間",sec:"秒",spin_again:"もう一度回す",restart:"最初から",remaining:"残り",eliminated:"脱落",winner:"優勝",elim_hint:"回すたびに、ポインタの下のセクターが脱落します。クリックでもう一度回せます。",ascendancy_short:"アセンダンシー",tree_hint:"ノードにカーソルを合わせるかタップすると説明が出ます",nodes:"アセンダンシーパッシブ",title:"アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名とアートは pathofexile2.com・poe2db.tw・poedb.tw より · 乱数は random.org より"},
-  ko_KR:{roster:"룰렛 구성",roster_hint:"이름을 클릭하면 룰렛에서 제외됩니다. 최소 두 개는 남습니다.",roster_reset:"모두 되돌리기",mode_single:"단판 뽑기",mode_elim:"서바이벌",min_spin:"최소 회전 시간",sec:"초",spin_again:"다시 돌리기",restart:"처음부터",remaining:"남은 수",eliminated:"탈락",winner:"우승",elim_hint:"돌릴 때마다 포인터 아래 칸이 탈락합니다. 클릭하면 다시 돌립니다.",ascendancy_short:"전직",tree_hint:"노드에 마우스를 올리거나 탭하면 설명이 표시됩니다",nodes:"전직 패시브",title:"전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름과 아트는 pathofexile2.com, poe2db.tw, poedb.tw · 난수는 random.org 제공"}
+  en_US:{sound:"Sound",roster:"Wheel line-up",roster_hint:"Click a name to take it off the wheel; at least two always stay on.",roster_reset:"Put all back",mode_single:"Single roll",mode_elim:"Elimination",min_spin:"Minimum spin",sec:"s",spin_again:"Spin again",restart:"Start over",remaining:"Remaining",eliminated:"Knocked out",winner:"Winner",elim_hint:"Every spin knocks the sector under the pointer off the wheel. Click to spin again.",ascendancy_short:"Ascendancy",tree_hint:"Hover or tap a node to read what it does",nodes:"Ascendancy passives",title:"Ascendancy Roulette",language:"Language",spin:"Spin",spinning:"Spinning…",status_idle:"Randomness: random.org",status_fetch:"Asking random.org for a true random number…",status_ok:"Result from random.org (true randomness)",status_fallback:"random.org unavailable — used local randomness",your_ascendancy:"Your ascendancy",character:"Character",nickname:"Character nickname",nick_empty:"Generate a name for your exile",generate:"Generate",copy:"Copy",copied:"Copied!",nick_hint:"3–23 characters, letters and underscores — fits Path of Exile naming rules.",credits:"Class names and art from pathofexile2.com, poe2db.tw and poedb.tw · Randomness from random.org"},
+  ru_RU:{sound:"Звук",roster:"Состав колеса",roster_hint:"Нажмите на имя, чтобы убрать его с колеса; двое всегда остаются.",roster_reset:"Вернуть всех",mode_single:"Один бросок",mode_elim:"На выбывание",min_spin:"Минимум вращения",sec:"с",spin_again:"Крутить снова",restart:"Начать заново",remaining:"Осталось",eliminated:"Выбывает",winner:"Победитель",elim_hint:"Каждое вращение выбивает с колеса сектор под указателем. Кликните, чтобы крутить снова.",ascendancy_short:"Подкласс",tree_hint:"Наведите курсор или коснитесь узла, чтобы прочитать описание",nodes:"Пассивные умения подкласса",title:"Рулетка подклассов",language:"Язык",spin:"Крутить",spinning:"Крутится…",status_idle:"Случайность: random.org",status_fetch:"Запрашиваем настоящее случайное число у random.org…",status_ok:"Результат от random.org (истинная случайность)",status_fallback:"random.org недоступен — использована локальная случайность",your_ascendancy:"Ваш подкласс",character:"Персонаж",nickname:"Никнейм персонажа",nick_empty:"Сгенерируйте имя для вашего изгнанника",generate:"Сгенерировать",copy:"Копировать",copied:"Скопировано!",nick_hint:"3–23 символа, буквы и подчёркивания — подходит под правила имён Path of Exile.",credits:"Названия классов и арты с pathofexile2.com, poe2db.tw и poedb.tw · Случайность от random.org"},
+  de_DE:{sound:"Ton",roster:"Rad-Aufstellung",roster_hint:"Klicke einen Namen an, um ihn vom Rad zu nehmen; mindestens zwei bleiben immer.",roster_reset:"Alle zurückstellen",mode_single:"Einzelwurf",mode_elim:"K.-o.-Modus",min_spin:"Mindestdauer",sec:"s",spin_again:"Nochmal drehen",restart:"Neu starten",remaining:"Verbleibend",eliminated:"Ausgeschieden",winner:"Sieger",elim_hint:"Jede Drehung wirft den Sektor unter dem Zeiger aus dem Rad. Zum erneuten Drehen klicken.",ascendancy_short:"Aufstiegsklasse",tree_hint:"Knoten anfahren oder antippen, um ihn zu lesen",nodes:"Aufstiegs-Passivfertigkeiten",title:"Aufstiegsklassen-Roulette",language:"Sprache",spin:"Drehen",spinning:"Dreht sich…",status_idle:"Zufall: random.org",status_fetch:"Frage random.org nach einer echten Zufallszahl…",status_ok:"Ergebnis von random.org (echter Zufall)",status_fallback:"random.org nicht erreichbar — lokaler Zufall verwendet",your_ascendancy:"Deine Aufstiegsklasse",character:"Charakter",nickname:"Charaktername",nick_empty:"Erzeuge einen Namen für deinen Verbannten",generate:"Erzeugen",copy:"Kopieren",copied:"Kopiert!",nick_hint:"3–23 Zeichen, Buchstaben und Unterstriche — entspricht den Namensregeln von Path of Exile.",credits:"Klassennamen und Artworks von pathofexile2.com, poe2db.tw und poedb.tw · Zufall von random.org"},
+  fr_FR:{sound:"Son",roster:"Composition de la roue",roster_hint:"Cliquez sur un nom pour le retirer de la roue ; il en reste toujours deux.",roster_reset:"Tout remettre",mode_single:"Tirage simple",mode_elim:"Élimination",min_spin:"Durée minimale",sec:"s",spin_again:"Tourner encore",restart:"Recommencer",remaining:"Restants",eliminated:"Éliminé",winner:"Gagnant",elim_hint:"Chaque tour élimine le secteur sous le pointeur. Cliquez pour relancer.",ascendancy_short:"Ascendance",tree_hint:"Survolez ou touchez un nœud pour lire son effet",nodes:"Passifs d'ascendance",title:"Roulette des ascendances",language:"Langue",spin:"Tourner",spinning:"En rotation…",status_idle:"Aléatoire : random.org",status_fetch:"Demande d'un vrai nombre aléatoire à random.org…",status_ok:"Résultat de random.org (vrai aléatoire)",status_fallback:"random.org indisponible — aléatoire local utilisé",your_ascendancy:"Votre ascendance",character:"Personnage",nickname:"Pseudo du personnage",nick_empty:"Générez un nom pour votre exilé",generate:"Générer",copy:"Copier",copied:"Copié !",nick_hint:"3 à 23 caractères, lettres et tirets bas — conforme aux règles de nommage de Path of Exile.",credits:"Noms des classes et illustrations de pathofexile2.com, poe2db.tw et poedb.tw · Aléatoire par random.org"},
+  es_ES:{sound:"Sonido",roster:"Participantes de la ruleta",roster_hint:"Haz clic en un nombre para quitarlo de la ruleta; siempre quedan al menos dos.",roster_reset:"Devolver todos",mode_single:"Tirada única",mode_elim:"Eliminación",min_spin:"Giro mínimo",sec:"s",spin_again:"Girar de nuevo",restart:"Empezar de nuevo",remaining:"Restantes",eliminated:"Eliminado",winner:"Ganador",elim_hint:"Cada giro elimina el sector bajo el puntero. Haz clic para girar otra vez.",ascendancy_short:"Ascendencia",tree_hint:"Pasa el cursor o toca un nodo para leerlo",nodes:"Pasivas de ascendencia",title:"Ruleta de ascendencias",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedad: random.org",status_fetch:"Pidiendo un número verdaderamente aleatorio a random.org…",status_ok:"Resultado de random.org (aleatoriedad real)",status_fallback:"random.org no disponible — se usó aleatoriedad local",your_ascendancy:"Tu ascendencia",character:"Personaje",nickname:"Apodo del personaje",nick_empty:"Genera un nombre para tu exiliado",generate:"Generar",copy:"Copiar",copied:"¡Copiado!",nick_hint:"3–23 caracteres, letras y guiones bajos — cumple las reglas de nombres de Path of Exile.",credits:"Nombres de clases y arte de pathofexile2.com, poe2db.tw y poedb.tw · Aleatoriedad de random.org"},
+  pt_BR:{sound:"Som",roster:"Participantes da roleta",roster_hint:"Clique em um nome para tirá-lo da roleta; sempre ficam pelo menos dois.",roster_reset:"Devolver todos",mode_single:"Giro único",mode_elim:"Eliminação",min_spin:"Giro mínimo",sec:"s",spin_again:"Girar de novo",restart:"Começar de novo",remaining:"Restantes",eliminated:"Eliminado",winner:"Vencedor",elim_hint:"Cada giro elimina o setor sob o ponteiro. Clique para girar de novo.",ascendancy_short:"Ascendência",tree_hint:"Passe o cursor ou toque em um nó para ler",nodes:"Passivas de ascendência",title:"Roleta de Ascendências",language:"Idioma",spin:"Girar",spinning:"Girando…",status_idle:"Aleatoriedade: random.org",status_fetch:"Pedindo um número verdadeiramente aleatório ao random.org…",status_ok:"Resultado do random.org (aleatoriedade real)",status_fallback:"random.org indisponível — usada aleatoriedade local",your_ascendancy:"Sua ascendência",character:"Personagem",nickname:"Apelido do personagem",nick_empty:"Gere um nome para o seu exilado",generate:"Gerar",copy:"Copiar",copied:"Copiado!",nick_hint:"3–23 caracteres, letras e sublinhados — segue as regras de nomes do Path of Exile.",credits:"Nomes das classes e arte de pathofexile2.com, poe2db.tw e poedb.tw · Aleatoriedade de random.org"},
+  th_TH:{sound:"เสียง",roster:"รายชื่อบนวงล้อ",roster_hint:"คลิกชื่อเพื่อเอาออกจากวงล้อ โดยจะเหลืออย่างน้อยสองรายการเสมอ",roster_reset:"นำกลับทั้งหมด",mode_single:"หมุนครั้งเดียว",mode_elim:"หมุนคัดออก",min_spin:"เวลาหมุนขั้นต่ำ",sec:"วิ",spin_again:"หมุนอีกครั้ง",restart:"เริ่มใหม่",remaining:"เหลืออยู่",eliminated:"ตกรอบ",winner:"ผู้ชนะ",elim_hint:"การหมุนแต่ละครั้งจะคัดช่องที่อยู่ใต้ตัวชี้ออก คลิกเพื่อหมุนอีกครั้ง",ascendancy_short:"คลาสรอง",tree_hint:"วางเมาส์หรือแตะที่โหนดเพื่ออ่านรายละเอียด",nodes:"พาสซีฟคลาสรอง",title:"รูเล็ตต์คลาสรอง",language:"ภาษา",spin:"หมุน",spinning:"กำลังหมุน…",status_idle:"สุ่มโดย: random.org",status_fetch:"กำลังขอเลขสุ่มจริงจาก random.org…",status_ok:"ผลลัพธ์จาก random.org (สุ่มจริง)",status_fallback:"random.org ใช้งานไม่ได้ — ใช้การสุ่มในเครื่องแทน",your_ascendancy:"คลาสรองของคุณ",character:"ตัวละคร",nickname:"ชื่อตัวละคร",nick_empty:"สร้างชื่อให้ผู้ถูกเนรเทศของคุณ",generate:"สร้างชื่อ",copy:"คัดลอก",copied:"คัดลอกแล้ว!",nick_hint:"3–23 ตัวอักษร ตัวอักษรและขีดล่าง — ตรงตามกฎการตั้งชื่อของ Path of Exile",credits:"ชื่อคลาสและภาพจาก pathofexile2.com, poe2db.tw และ poedb.tw · การสุ่มจาก random.org"},
+  ja_JP:{sound:"サウンド",roster:"ホイールの顔ぶれ",roster_hint:"名前をクリックするとホイールから外せます。最低2つは残ります。",roster_reset:"すべて戻す",mode_single:"1回抽選",mode_elim:"勝ち抜き戦",min_spin:"最短回転時間",sec:"秒",spin_again:"もう一度回す",restart:"最初から",remaining:"残り",eliminated:"脱落",winner:"優勝",elim_hint:"回すたびに、ポインタの下のセクターが脱落します。クリックでもう一度回せます。",ascendancy_short:"アセンダンシー",tree_hint:"ノードにカーソルを合わせるかタップすると説明が出ます",nodes:"アセンダンシーパッシブ",title:"アセンダンシー・ルーレット",language:"言語",spin:"回す",spinning:"回転中…",status_idle:"乱数: random.org",status_fetch:"random.org に真の乱数を要求中…",status_ok:"random.org の結果（真の乱数）",status_fallback:"random.org に接続できません — ローカル乱数を使用",your_ascendancy:"あなたのアセンダンシー",character:"キャラクター",nickname:"キャラクター名",nick_empty:"エグザイルの名前を生成",generate:"生成",copy:"コピー",copied:"コピーしました！",nick_hint:"3〜23文字、英字とアンダースコア — Path of Exile の命名規則に準拠。",credits:"クラス名とアートは pathofexile2.com・poe2db.tw・poedb.tw より · 乱数は random.org より"},
+  ko_KR:{sound:"소리",roster:"룰렛 구성",roster_hint:"이름을 클릭하면 룰렛에서 제외됩니다. 최소 두 개는 남습니다.",roster_reset:"모두 되돌리기",mode_single:"단판 뽑기",mode_elim:"서바이벌",min_spin:"최소 회전 시간",sec:"초",spin_again:"다시 돌리기",restart:"처음부터",remaining:"남은 수",eliminated:"탈락",winner:"우승",elim_hint:"돌릴 때마다 포인터 아래 칸이 탈락합니다. 클릭하면 다시 돌립니다.",ascendancy_short:"전직",tree_hint:"노드에 마우스를 올리거나 탭하면 설명이 표시됩니다",nodes:"전직 패시브",title:"전직 룰렛",language:"언어",spin:"돌리기",spinning:"돌리는 중…",status_idle:"난수: random.org",status_fetch:"random.org에 진짜 난수를 요청하는 중…",status_ok:"random.org 결과 (진짜 난수)",status_fallback:"random.org 사용 불가 — 로컬 난수 사용",your_ascendancy:"당신의 전직",character:"캐릭터",nickname:"캐릭터 닉네임",nick_empty:"당신의 추방자를 위한 이름 생성",generate:"생성",copy:"복사",copied:"복사됨!",nick_hint:"3–23자, 영문자와 밑줄 — Path of Exile 이름 규칙에 맞습니다.",credits:"클래스 이름과 아트는 pathofexile2.com, poe2db.tw, poedb.tw · 난수는 random.org 제공"}
 };
 
 /* ============ NICKNAME GENERATOR POOLS ============ */
@@ -405,6 +422,7 @@ function applyLang(){
   });
   updateSpinLabels();
   renderOut(); renderRoster();
+  const sb = $("#sndBtn"); sb.title = t("sound"); sb.setAttribute("aria-label", t("sound"));
   document.title = t("title") + (GAMES[game] ? " · " + G().label : "");
   if(current) showResult(current, false);
   drawWheel();
@@ -487,13 +505,17 @@ function startSpin(minTotal){
     if(brake){
       brake.t += dt;
       const x = Math.min(1, brake.t/brake.dur);
+      const was = rotation;
       setRotation(brake.from + brake.D*(1 - Math.pow(1-x, 4)));
+      tickEdges(was, rotation, dt);
       if(x >= 1){ done(); return; }
     } else {
       free += dt;
       v = Math.min(SPIN_VMAX, v + SPIN_ACC*dt);
+      const was = rot;
       rot += v*dt;
       setRotation(rot);
+      tickEdges(was, rot, dt);
       if(pending && free >= hold && v >= SPIN_VMAX){
         let D = v*brakeTime/4;                                    // a quartic ease-out at this speed covers this much
         D += ((((pending.deg - (rot + D)) % 360) + 360) % 360);   // stretch it so the sector ends under the pointer
@@ -507,6 +529,88 @@ function startSpin(minTotal){
   }
   requestAnimationFrame(frame);
   return { finished: finished, land: function(deg, turns){ pending = {deg: (((deg % 360) + 360) % 360), turns: turns || 0}; } };
+}
+
+/* ===================== SOUND ===================== */
+// The wheel clacks once for every sector edge that passes the pointer, the way a peg wheel does.
+// It is synthesised on the spot — a short noise burst through a bandpass, so there is no asset to load.
+let audio = null, master = null, noise = null, muted = false;
+function audioCtx(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  if(!audio){
+    audio = new AC();
+    master = audio.createGain(); master.gain.value = 0.9; master.connect(audio.destination);
+    const len = Math.floor(audio.sampleRate * 0.06), buf = audio.createBuffer(1, len, audio.sampleRate), ch = buf.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 3);   // a decaying burst, already shaped like a knock
+    noise = buf;
+  }
+  if(audio.state === "suspended") audio.resume();
+  return audio;
+}
+// one clack. k is how fast the wheel is going, 0..1: faster means louder and brighter.
+function clack(ac, when, k){
+  const src = ac.createBufferSource(); src.buffer = noise;
+  src.playbackRate.value = 0.9 + Math.random()*0.3;
+  const bp = ac.createBiquadFilter(); bp.type = "bandpass";
+  bp.frequency.value = 1250 + 900*k + Math.random()*260; bp.Q.value = 6;
+  const g = ac.createGain();
+  const peak = 0.05 + 0.11*k;
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(peak, when + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + 0.055);
+  src.connect(bp); bp.connect(g); g.connect(master);
+  src.start(when); src.stop(when + 0.07);
+}
+// How many sector edges went past the pointer between two frames, and a clack for each of them.
+function tickEdges(prevRot, nowRot, dt){
+  if(!N || dt <= 0) return;
+  const step = 360/N;
+  const n = Math.floor(nowRot/step) - Math.floor(prevRot/step);
+  if(n <= 0) return;
+  const k = Math.max(0, Math.min(1, ((nowRot - prevRot)/dt)/SPIN_VMAX));
+  pokePointer(k);                               // the flapper takes the knock even with the sound off
+  if(muted) return;
+  const ac = audioCtx(); if(!ac) return;
+  const m = Math.min(n, 4);                     // past four in one frame the ear hears a buzz anyway
+  const t0 = ac.currentTime;
+  for(let i=0;i<m;i++) clack(ac, t0 + i*dt/m, k);
+}
+// The pointer is hinged at its base and rides on the sectors like the flapper of a peg wheel:
+// an edge drags it along the way the wheel turns, it springs back once the edge clears, and on the
+// way back it slaps against the rim instead of swinging freely. Same event as the clack, so the
+// two always land together. pegA is the deflection along the direction of travel, in degrees —
+// the wheel turns clockwise, so the tip trails to the right and the css angle is its negative.
+const ptr = $(".pointer");
+const PEG_K = 950, PEG_C = 15;                  // spring and damping of the hinge
+const PEG_MAX = 20, PEG_BACK = 3;              // how far an edge can drag it, and how far back past rest it may go
+let pegA = 0, pegV = 0, pegOn = false, pegLast = 0;
+function pokePointer(k){
+  if(REDUCED) return;
+  pegV = Math.min(950, pegV + 175 + 300*k);     // the faster the edge, the harder it drags
+  if(!pegOn){ pegOn = true; pegLast = performance.now(); requestAnimationFrame(pegStep); }
+}
+function pegStep(now){
+  const dt = Math.min((now - pegLast)/1000, 0.05); pegLast = now;
+  pegV += (-PEG_K*pegA - PEG_C*pegV)*dt;
+  pegA += pegV*dt;
+  if(pegA > PEG_MAX){ pegA = PEG_MAX; pegV = 0; }              // held against the edge that is pushing it
+  else if(pegA < -PEG_BACK){ pegA = -PEG_BACK; pegV *= -0.25; }  // and it bumps the rim on the way back
+  if(Math.abs(pegA) < 0.05 && Math.abs(pegV) < 0.6){
+    pegA = pegV = 0; pegOn = false;
+    ptr.style.transform = "translateX(-50%)";
+    return;
+  }
+  ptr.style.transform = "translateX(-50%) rotate(" + (-pegA).toFixed(2) + "deg)";
+  requestAnimationFrame(pegStep);
+}
+function setMuted(on){
+  muted = on;
+  const b = $("#sndBtn");
+  b.classList.toggle("off", muted);
+  b.setAttribute("aria-pressed", muted ? "false" : "true");
+  b.title = t("sound"); b.setAttribute("aria-label", t("sound"));
+  try{ localStorage.setItem("poe-mute", muted ? "1" : "0"); }catch(e){}
 }
 
 /* ===================== RANDOM.ORG ===================== */
@@ -617,6 +721,7 @@ async function spin(){
   if(winner){ newRun(); return; }        // once someone has won, the same click starts a new run
   if(N < 2) return;
   spinning = true; lockUI(true); updateSpinLabels();
+  audioCtx();                            // opened on the click itself, which is the gesture browsers ask for
   setStatus("busy","status_fetch");
   const run = startSpin(minSpin);   // the wheel moves on the next frame, before the request is even answered
 
@@ -1035,6 +1140,9 @@ function clampSec(v){ return Number.isFinite(v) ? Math.max(2, Math.min(60, Math.
     minSpin = clampSec(parseFloat(ms.value)); ms.value = minSpin;
     try{ localStorage.setItem("poe-minspin", minSpin); }catch(e){}
   });
+  let savedMute = null; try{ savedMute = localStorage.getItem("poe-mute"); }catch(e){}
+  setMuted(savedMute === "1");
+  $("#sndBtn").addEventListener("click", ()=>{ setMuted(!muted); if(!muted) audioCtx(); });
   let savedMode = null; try{ savedMode = localStorage.getItem("poe-mode"); }catch(e){}
   mode = savedMode === "elim" ? "elim" : "single";
   document.body.classList.toggle("elim", mode === "elim");
