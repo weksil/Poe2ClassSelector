@@ -506,10 +506,61 @@ function applyLang(){
 }
 
 /* ===================== WHEEL ===================== */
+const fitCache = new Map();
 function fitFont(text, maxWidth, size, family, weight){
-  ctx.font = `${weight} ${size}px ${family}`;
-  while(size>9 && ctx.measureText(text).width>maxWidth){ size -= .5; ctx.font = `${weight} ${size}px ${family}`; }
-  return size;
+  const key = weight + "|" + size + "|" + Math.round(maxWidth) + "|" + family + "|" + text;
+  let out = fitCache.get(key);
+  if(out === undefined){
+    out = size;
+    ctx.font = `${weight} ${out}px ${family}`;
+    while(out>9 && ctx.measureText(text).width>maxWidth){ out -= .5; ctx.font = `${weight} ${out}px ${family}`; }
+    fitCache.set(key, out);
+  } else ctx.font = `${weight} ${out}px ${family}`;
+  return out;
+}
+// The winner is not showered in sparks — its own sector on the wheel is switched on: the rest of
+// the wheel goes dark, the sector fills with gold from the hub outwards, beats a few times and then
+// simply stays lit until the next spin. winLit is the position on the wheel, -1 for none.
+const FLARE_MS = 2200;
+let winLit = -1, flare = null;
+function unlight(){ winLit = -1; flare = null; }
+function activateSector(pos){
+  if(!(pos >= 0) || pos >= N) return;
+  winLit = pos;
+  if(REDUCED){ flare = null; drawWheel(); return; }   // lit, but without the run-up
+  flare = {t0: performance.now(), e: 0};
+  const step = now => {
+    if(!flare || winLit < 0) return;
+    flare.e = now - flare.t0;
+    if(flare.e >= FLARE_MS){ flare = null; drawWheel(); return; }   // holds lit, with nothing left to animate
+    drawWheel();
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+// The gold that fills the winning wedge. prog is null once it is simply lit.
+function litWedge(a0, a1, cx, cy, rIn, rOut, prog){
+  let reach = 1, pulse = 1;
+  if(prog !== null){
+    const sweep = Math.min(1, prog/0.3);
+    reach = 1 - Math.pow(1 - sweep, 3);                            // races out from the hub, then eases
+    const after = Math.max(0, (prog - 0.3)/0.7);
+    pulse = 0.74 + 0.26*Math.cos(after*Math.PI*6)*(1 - after);     // a few beats that settle
+  }
+  const rEdge = rIn + (rOut - rIn)*reach;
+  const g = ctx.createRadialGradient(cx, cy, rIn, cx, cy, rOut);
+  g.addColorStop(0, "rgba(255,244,214," + (.78*pulse).toFixed(3) + ")");
+  g.addColorStop(.55, "rgba(236,196,116," + (.46*pulse).toFixed(3) + ")");
+  g.addColorStop(1, "rgba(255,226,152," + (.3*pulse).toFixed(3) + ")");
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,rEdge,a0,a1); ctx.closePath();
+  ctx.fillStyle = g; ctx.fill();
+  ctx.save();                                                       // the edge of the sector burning
+  ctx.shadowColor = "rgba(255,226,152,.95)"; ctx.shadowBlur = 50*pulse;
+  ctx.strokeStyle = "rgba(255,244,214," + (.95*pulse).toFixed(3) + ")"; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,rOut,a0,a1); ctx.closePath();
+  ctx.stroke(); ctx.stroke();                                       // twice, so the bloom is thick enough to read
+  ctx.restore();
+  return pulse;
 }
 function drawWheel(){
   const W = canvas.width, R = W/2, cx = R, cy = R;
@@ -521,6 +572,7 @@ function drawWheel(){
   const rOut = R-14, rIn = R*0.17;
   const fontHead = getComputedStyle(document.documentElement).getPropertyValue("--font-head");
   const fontBody = getComputedStyle(document.documentElement).getPropertyValue("--font-body");
+  const prog = flare ? Math.min(1, flare.e/FLARE_MS) : null;
   order.forEach((ci,i)=>{
     const c = CL[ci];
     const a0 = i*STEP, a1 = a0+STEP;
@@ -531,17 +583,26 @@ function drawWheel(){
     ctx.fillStyle = g; ctx.fill();
     ctx.strokeStyle = "rgba(200,170,110,.55)"; ctx.lineWidth = 2; ctx.stroke();
 
+    const lit = i === winLit, dim = winLit >= 0 && !lit;
+    if(lit) litWedge(a0, a1, cx, cy, rIn, rOut, prog);
+    else if(dim){                                // everything that did not win steps back
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,rOut,a0,a1); ctx.closePath();
+      ctx.fillStyle = "rgba(6,5,4,.62)"; ctx.fill();
+    }
+
     // labels along the radius
     ctx.save();
     ctx.translate(cx,cy); ctx.rotate(a0+STEP/2);
     ctx.textAlign="right"; ctx.textBaseline="middle";
     const maxW = rOut - rIn - 60;
     const asc = nameOf(c.en), chr = nameOf(c.base);
-    const s1 = fitFont(asc, maxW, 30, fontHead, "700");
-    ctx.fillStyle="#efe6d3"; ctx.shadowColor="rgba(0,0,0,.9)"; ctx.shadowBlur=6;
+    fitFont(asc, maxW, 30, fontHead, "700");
+    if(lit){ ctx.shadowColor = "rgba(255,236,178,.95)"; ctx.shadowBlur = 16; }
+    else { ctx.shadowColor = "rgba(0,0,0,.9)"; ctx.shadowBlur = 6; }
+    ctx.fillStyle = lit ? "#fff8e6" : dim ? "rgba(239,230,211,.42)" : "#efe6d3";
     ctx.fillText(asc, rOut-28, -12);
-    const s2 = fitFont(chr, maxW, 21, fontBody, "500");
-    ctx.fillStyle="rgba(230,207,148,.95)";
+    fitFont(chr, maxW, 21, fontBody, "500");
+    ctx.fillStyle = lit ? "rgba(255,244,214,.95)" : dim ? "rgba(230,207,148,.42)" : "rgba(230,207,148,.95)";
     ctx.fillText(chr, rOut-28, 16);
     ctx.restore();
   });
@@ -801,7 +862,7 @@ async function spin(){
   if(spinning) return;
   if(winner){ newRun(); return; }        // once someone has won, the same click starts a new run
   if(N < 2) return;
-  spinning = true; lockUI(true); updateSpinLabels();
+  spinning = true; unlight(); drawWheel(); lockUI(true); updateSpinLabels();
   audioCtx();                            // opened on the click itself, which is the gesture browsers ask for
   setStatus("busy","status_fetch");
   const run = startSpin(minSpin);   // the wheel moves on the next frame, before the request is even answered
@@ -827,7 +888,7 @@ async function spin(){
   if(mode === "single"){
     current = cls; nickname = "";
     showResult(cls, true, "roll");             // the card flares like a win, but it is still "your ascendancy"
-    celebrate(nameOf(cls.en));
+    celebrate(nameOf(cls.en), pos);
   }
   else await knockOut(ci, cls);
 
@@ -852,13 +913,13 @@ async function knockOut(ci, cls){
     current = winner; nickname = "";
     renderOut();
     showResult(winner, true, "win");
-    celebrate();
+    celebrate(null, 0);                        // one sector left, so it is the whole wheel
     await wait(500);
   }
 }
 // Back to a full wheel, whichever mode we are in.
 function newRun(){
-  winner = null; outList = []; nickname = "";
+  winner = null; outList = []; nickname = ""; unlight();
   initOrder();
   current = sectorUnderPointer();
   showResult(current, true, "pick");
@@ -908,6 +969,7 @@ function setEffects(off, remember){
     fxx.clearRect(0, 0, innerWidth, innerHeight);
     document.querySelectorAll(".fx-label").forEach(el=>el.remove());
     document.querySelectorAll(".wheel-wrap").forEach(el=>el.classList.remove("shake","win"));
+    unlight(); drawWheel();
   }
   if(remember) setPref("fx", !fxMuted);
 }
@@ -986,28 +1048,14 @@ function burstOut(p, cols, name){
   }
   fxRun();
 }
-// The last one standing: a golden shockwave off the hub and confetti down the page.
-// `label` is the name to fly up: the winner's own name after a single roll, the word otherwise.
-function celebrate(label){
+// The winner: its sector on the wheel is switched on and the name rises off the hub. `label` is the
+// name to fly up — the winner's own after a single roll, the word otherwise; `pos` is its sector.
+function celebrate(label, pos){
   if(fxMuted) return;
   const p = hubSpot(), w = $(".wheel-wrap");
   w.classList.remove("win"); void w.offsetWidth; w.classList.add("win");
   floatLabel(p, label || t("winner"), "win");
-  if(REDUCED) return;
-  const gold = ["#ffe9ae","#e6cf94","#ffd36b","#fff6dd","#c8aa6e"];
-  ring(p.x, p.y, 20, Math.max(innerWidth, innerHeight)*0.75, "#ffe9ae", 1.3, 16);
-  ring(p.x, p.y, 20, 460, "#fff6dd", .9, 8);
-  ring(p.x, p.y, 20, 760, "#e6cf94", 1.7, 5);
-  for(let i=0;i<260;i++){
-    const a = Math.random()*6.283, sp = 200 + Math.pow(Math.random(), .5)*1000;
-    spark(p.x, p.y, a, sp, gold[i%gold.length], 1 + Math.random()*1.6, 1.5 + Math.random()*3.5, 520, .75);
-  }
-  for(let i=0;i<140;i++){                      // confetti raining across the whole page
-    shard(Math.random()*innerWidth, -30 - Math.random()*innerHeight*0.6,
-          (Math.random()-.5)*160, 220 + Math.random()*420,
-          gold[i%gold.length], 2.6 + Math.random()*1.6, 6 + Math.random()*12, 260, .12);
-  }
-  fxRun();
+  activateSector(pos);
 }
 
 /* ===================== RESULT / BACKGROUND ===================== */
@@ -1183,6 +1231,7 @@ function applyGame(){
     b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false");
   });
   current = null; nickname = ""; winner = null; outList = []; resultKind = "pick";
+  unlight();
   loadExcluded();
   initOrder();
   applyLang();
@@ -1270,7 +1319,7 @@ function clampSec(v){ return Number.isFinite(v) ? Math.max(2, Math.min(60, Math.
   await loadGame(game);
   applyGame();
   // redraw once web fonts are ready so Cinzel is used on the wheel
-  if(document.fonts && document.fonts.ready) document.fonts.ready.then(drawWheel);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ fitCache.clear(); drawWheel(); });
 })();
 
 </script>
