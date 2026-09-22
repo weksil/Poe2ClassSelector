@@ -736,10 +736,13 @@ function clack(ac, when, k){
   src.start(when); src.stop(when + 0.07);
 }
 // How many sector edges went past the pointer between two frames, and a clack for each of them.
+// The pointer sits at the top, canvas angle -90, so an edge is under it when rotation + 90 is a whole
+// number of sectors — counted from rotation alone, the knock landed somewhere inside the sector instead,
+// by 90 mod the sector size. The flapper and the clack both come from here, so they move together.
 function tickEdges(prevRot, nowRot, dt){
   if(!N || dt <= 0) return;
   const step = 360/N;
-  const n = Math.floor(nowRot/step) - Math.floor(prevRot/step);
+  const n = Math.floor((nowRot + 90)/step) - Math.floor((prevRot + 90)/step);
   if(n <= 0) return;
   const k = Math.max(0, Math.min(1, ((nowRot - prevRot)/dt)/SPIN_VMAX));
   pokePointer(k);                               // the flapper takes the knock even with the sound off
