@@ -124,6 +124,8 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .tip{position:absolute;z-index:9;display:flex;gap:6px;align-items:flex-start;pointer-events:none;opacity:0;transform:translateY(4px);
   transition:opacity .12s ease,transform .12s ease}
 .tip.col{flex-direction:column}
+.tip.split{flex-wrap:wrap}                       /* node card on its own line, the skill cards under it */
+.tip .tip-break{flex-basis:100%;height:0;margin-top:-6px}
 .tip.on{opacity:1;transform:none}
 .tip-card{flex:none;min-width:220px;width:max-content;max-width:min(340px,86vw);background:linear-gradient(180deg,#0b0a08,#050403);border:1px solid #6b5a33;
   box-shadow:0 10px 30px rgba(0,0,0,.9),inset 0 0 0 1px rgba(0,0,0,.8)}
@@ -1183,7 +1185,8 @@ function skillCard(sk){
   const card = div("tip-card skill");
   const head = div("tip-head");
   const ic = document.createElement("img"); ic.src = assetUrl("skills", sk.i); ic.alt = "";
-  const nm = div(""); nm.append(div("sk-name", sk.n), div("sk-type", sk.tl));
+  const nm = div(""); nm.appendChild(div("sk-name", sk.n));
+  if(sk.tl) nm.appendChild(div("sk-type", sk.tl));    // poedb gem popups have no type line
   head.append(ic, nm);
   const body = div("tip-body");
   const CLS = {p:"tip-prop", d:"tip-desc", m:"tip-mod", qm:"tip-mod", qh:"tip-qh", t:"tip-tab", f:"tip-foot"};
@@ -1207,48 +1210,75 @@ function showTip(grp, hit, txt, c){
   const p2 = div("tip-prop", t("character")+": "); const b2=document.createElement("b"); b2.textContent=nameOf(c.base); p2.appendChild(b2);
   body.append(p1,p2);
   const mods = pick(txt.d) || [];
-  // a node that grants a skill says so on its first line; that line gets the skill icon and name, as on poe2db
-  const sk = txt.s ? skillOf(txt.s) : null;
+  // txt.s lists the skills the node grants as [line, skill]: that line gets the skill icon and name, as on poe2db
+  const grants = (txt.s || []).map(function(g){ return {line:g[0], sk:skillOf(g[1])}; });
+  const ready = grants.every(function(g){ return g.sk; });
   if(mods.length){
     body.appendChild(div("tip-sep"));
     mods.forEach(function(m, i){
       const d = div("tip-mod", m);
-      if(i === 0 && sk){
+      const g = ready && grants.find(function(g){ return g.line === i; });
+      if(g){
         d.textContent = ""; d.classList.add("tip-grant");
-        const ic=document.createElement("img"); ic.src=assetUrl("skills", sk.i); ic.alt="";
-        const at = m.lastIndexOf(sk.n);
+        const ic=document.createElement("img"); ic.src=assetUrl("skills", g.sk.i); ic.alt="";
         d.appendChild(ic);
+        const nm = nameIn(m, g.sk.n), at = nm ? m.lastIndexOf(nm) : -1;
         if(at < 0) d.appendChild(document.createTextNode(m));
-        else { const s=document.createElement("span"); s.className="sk"; s.textContent=sk.n;
-               d.append(document.createTextNode(m.slice(0, at)), s, document.createTextNode(m.slice(at + sk.n.length))); }
+        else { const s=document.createElement("span"); s.className="sk"; s.textContent=nm;
+               d.append(document.createTextNode(m.slice(0, at)), s, document.createTextNode(m.slice(at + nm.length))); }
       }
       body.appendChild(d);
     });
   }
   card.appendChild(body);
   tip.appendChild(card);
-  if(sk) tip.appendChild(skillCard(sk));
-  else if(txt.s){
+  if(ready) grants.forEach(function(g){ tip.appendChild(skillCard(g.sk)); });
+  else {
     // the skill file for this language is still on its way; redraw once it lands if the node is still open
-    loadSkills(G().id, lang).then(function(){ if(grp.classList.contains("on") && grp.isConnected && skillOf(txt.s)) showTip(grp, hit, txt, c); }, function(){});
+    const gid = G().id;
+    loadSkills(gid, lang).then(function(){ if(grp.classList.contains("on") && grp.isConnected && G().id === gid && skillOf(txt.s[0][1])) showTip(grp, hit, txt, c); }, function(){});
   }
-  placeTip(tip, hit, !!sk);
+  placeTip(tip, hit, grants.length > 0 && ready);
 }
-// Places the tooltip beside the node and inside the viewport. With a skill card the two cards sit side
-// by side where the screen has room for both, and stack otherwise.
+// The skill's name as the node line spells it, or "" when it is not there as is. A support gem is named
+// without its "Support" word in the line ("Supported by Level 30 Ancestral Call", "Поддержка: Зов предков"),
+// and a declined name ("Метки убийцы") is left to the icon rather than half-highlighted.
+function nameIn(line, name){
+  const low = line.toLowerCase();
+  const names = [name, name.replace(/^[^:：]+[:：]\s*/, ""), name.replace(/\s*(Support|サポート)$/, "")];
+  for(const n of names){
+    const at = n ? low.lastIndexOf(n.toLowerCase()) : -1;
+    if(at >= 0) return line.substr(at, n.length);
+  }
+  return "";
+}
+// Places the tooltip beside the node and inside the viewport. With skill cards, all the cards sit side by
+// side where the screen has room; failing that, with two or more skills, the node card goes on top and the
+// skills side by side under it; otherwise everything stacks.
 function placeTip(tip, hit, pair){
   const wrap=$("#treeWrap"), wb=wrap.getBoundingClientRect(), nb=hit.getBoundingClientRect();
   const vw = document.documentElement.clientWidth, vh = window.innerHeight;
   const nx=nb.left-wb.left+nb.width/2, ny=nb.top-wb.top+nb.height/2;
-  // measured stacked, so the pair is never laid out wider than a phone screen just to find out it does not fit
+  // measured stacked, so the cards are never laid out wider than a phone screen just to find out they do not fit
+  tip.classList.remove("split"); tip.style.width = "";
+  const brk = tip.querySelector(".tip-break"); if(brk) brk.remove();
   tip.classList.add("col", "on");
   let tw=tip.offsetWidth, left;
-  const rowW = [].reduce.call(tip.children, function(s, k){ return s + k.offsetWidth; }, 0) + 6*(tip.children.length - 1);
+  const w = [].map.call(tip.children, function(k){ return k.offsetWidth; });
+  const skillsW = w.slice(1).reduce(function(s, x){ return s + x; }, 0) + 6*(w.length - 2);
+  const layouts = [["row", w[0] + 6 + skillsW]];
+  if(w.length > 2) layouts.push(["split", Math.max(w[0], skillsW)]);
   const roomL = nb.left - 18, roomR = vw - nb.right - 18;
   const preferL = nx > wb.width/2;
-  if(pair && rowW <= Math.max(roomL, roomR)){
-    tip.classList.remove("col"); tw = tip.offsetWidth;
-    const onL = rowW <= (preferL ? roomL : roomR) ? preferL : !preferL;
+  const fit = pair && layouts.find(function(l){ return l[1] <= Math.max(roomL, roomR); });
+  if(fit){
+    tip.classList.remove("col");
+    if(fit[0] === "split"){
+      tip.classList.add("split"); tip.style.width = fit[1] + "px";
+      tip.children[0].after(div("tip-break"));
+    }
+    tw = tip.offsetWidth;
+    const onL = fit[1] <= (preferL ? roomL : roomR) ? preferL : !preferL;
     left = onL ? nx - nb.width/2 - tw - 10 : nx + nb.width/2 + 10;
   } else {
     left = preferL ? nx - nb.width/2 - tw - 10 : nx + nb.width/2 + 10;

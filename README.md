@@ -19,7 +19,7 @@ One-page site: a roulette wheel that picks an ascendancy class and generates a c
 - Randomness comes from the random.org HTTP API (true random numbers). If random.org is unreachable, the page falls back to `crypto.getRandomValues` and says so in the status line.
 - The wheel starts turning on the click itself: it spins freely while random.org is being asked, then brakes onto the drawn sector, so the button never feels like it is waiting for the network. The sector is drawn on the wheel as it currently stands, so a knocked-out one can never come up again.
 - Nickname generator builds Path-of-Exile-compatible names (3–23 characters, letters and underscores), flavoured by the rolled character class.
-- The result card draws the ascendancy passive tree the way poe2db and poedb do: the round class art with the nodes and their connections on top. Hovering or tapping a node opens a Path-of-Exile-style tooltip with its name and effect in the selected language. A Path of Exile 2 node that grants a skill shows it the way poe2db does: the skill icon on its *Grants Skill* line and the skill's gem card beside the node card — tags, level, cost, cooldown, description, the stats of each part of the skill and the quality bonus. The two cards sit side by side where the screen has room and stack on a phone.
+- The result card draws the ascendancy passive tree the way poe2db and poedb do: the round class art with the nodes and their connections on top. Hovering or tapping a node opens a Path-of-Exile-style tooltip with its name and effect in the selected language. A node that grants a skill — in both games, whether it grants, triggers or supports it — shows it the way poe2db does: the skill icon on the line that names it and the skill's gem card beside the node card — tags, level, cost, cooldown, description, the stats of each part of the skill and the quality bonus. The cards sit side by side where the screen has room; a node with two skills (Chieftain's Tukohama, War's Herald) puts its own card on top and the two skills side by side under it when that fits better, and on a phone everything stacks. The skill name in the node line is highlighted only where the line spells it exactly; a declined form (Russian *Метки убийцы*) keeps just the icon.
 
 ## Settings and privacy
 
@@ -54,7 +54,10 @@ Each game has one data file, fetched only when that game is selected.
 
 Each file holds the class list, the ascendancy and character names in 9 languages, and per tree the viewBox, node coordinates, connections and the name plus description of every node in 9 languages.
 
-- `data/poe2-skills/<lang>.js` — the 55 skills Path of Exile 2 ascendancy nodes grant, from the gem popups on poe2db.tw, one file per language so only the current one is fetched, and only once a tree that needs it is shown. A node names its skill by key (`s` in the node text).
+- `data/poe2-skills/<lang>.js` — the 55 skills Path of Exile 2 ascendancy nodes grant, from the gem popups on poe2db.tw.
+- `data/poe1-skills/<lang>.js` — the 12 skills and support gems Path of Exile ascendancy nodes grant or trigger, from the gem popups on the poedb.tw skill pages.
+
+One file per language, so only the current one is fetched, and only once a tree that needs it is shown. A node lists its skills as `[line, skill key]` pairs (`s` in the node text), the line being the one that names the skill.
 
 Where the source has no translation the page falls back to English. That is Thai throughout the Path of Exile 2 node text, and the Devotion to the King node in five languages. The same goes for the skill that node grants, Queen's Procession.
 
@@ -63,7 +66,7 @@ Where the source has no translation the page falls back to English. That is Thai
 - `assets/poe2/bg/*.webp` — wide class artworks used as the page background. `assets/poe2/art/*.webp` — round ascendancy illustrations used in the result card and as the tree background. Abyssal Lich has no wide art, so its illustration serves as the background too.
 - `assets/poe1/bg/*.webp` — the round ascendancy-screen medallion of each class, used for the tree, the result card, and as the page background where it is blown up to fill the screen, capped at three times the size it would need to fit.
 - `assets/<game>/nodes/*.webp` — passive node icons, 250 for Path of Exile 2 and 271 for Path of Exile.
-- `assets/poe2/skills/*.webp` — the icons of those 55 granted skills.
+- `assets/<game>/skills/*.webp` — the icons of the granted skills, 55 for Path of Exile 2 and 12 for Path of Exile.
 - `assets/<game>/ui/` — the node frames, plus the centre ornament of the Path of Exile ascendancy panel.
 
 Class names and art © Grinding Gear Games. Art hosted by poe2db.tw and poedb.tw.
