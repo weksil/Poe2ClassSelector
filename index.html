@@ -79,7 +79,8 @@ canvas#wheel{width:100%;height:100%;display:block;border-radius:50%;will-change:
 .hub span{font-family:var(--font-head);font-weight:700;font-size:clamp(11px,1.6vw,18px);color:var(--gold-2);letter-spacing:.08em;text-align:center;line-height:1.1;padding:4px}
 
 /* ---- side panel ---- */
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;backdrop-filter:blur(8px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;backdrop-filter:blur(8px);box-shadow:0 20px 60px rgba(0,0,0,.6);
+  position:relative;z-index:3}   /* above the footer, which a tall node tooltip can reach down to */
 .btn{appearance:none;border:1px solid var(--gold);background:linear-gradient(180deg,#5a4520,#2e2210);color:var(--gold-2);font-family:var(--font-head);font-weight:700;letter-spacing:.1em;
   font-size:16px;padding:14px 22px;border-radius:8px;cursor:pointer;width:100%;transition:transform .1s,filter .2s;text-transform:uppercase}
 .btn:hover:not(:disabled){filter:brightness(1.2)}
@@ -119,18 +120,36 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .tree-wrap svg .halo{fill:none;stroke:var(--gold-2);stroke-width:14;opacity:0;pointer-events:none;transition:opacity .12s}
 .tree-wrap svg g.nd.on .halo{opacity:.95}
 .tree-wrap svg g.nd.on .ico{filter:brightness(1.35)}
-.tip{position:absolute;z-index:9;min-width:220px;max-width:min(340px,86vw);pointer-events:none;opacity:0;transform:translateY(4px);
-  transition:opacity .12s ease,transform .12s ease;background:linear-gradient(180deg,#0b0a08,#050403);border:1px solid #6b5a33;
-  box-shadow:0 10px 30px rgba(0,0,0,.9),inset 0 0 0 1px rgba(0,0,0,.8)}
+/* the tooltip holds the node card and, for a node that grants a skill, the skill's own card beside or under it */
+.tip{position:absolute;z-index:9;display:flex;gap:6px;align-items:flex-start;pointer-events:none;opacity:0;transform:translateY(4px);
+  transition:opacity .12s ease,transform .12s ease}
+.tip.col{flex-direction:column}
 .tip.on{opacity:1;transform:none}
+.tip-card{flex:none;min-width:220px;width:max-content;max-width:min(340px,86vw);background:linear-gradient(180deg,#0b0a08,#050403);border:1px solid #6b5a33;
+  box-shadow:0 10px 30px rgba(0,0,0,.9),inset 0 0 0 1px rgba(0,0,0,.8)}
 .tip .tip-head{font-family:var(--font-head);font-weight:700;text-align:center;color:#e8dcc0;font-size:15px;padding:7px 12px;
   background:linear-gradient(180deg,#241d10,#0d0a06);border-bottom:1px solid #6b5a33;letter-spacing:.03em}
 .tip .tip-body{padding:9px 12px 11px}
-.tip .tip-prop{font-size:11.5px;color:#a79d88}
-.tip .tip-prop b{color:#d6c69c;font-weight:500}
+.tip .tip-prop{font-size:11.5px;color:#a79d88;white-space:pre-line}
+.tip .tip-prop b,.tip .tip-prop .v{color:#e6e0d2;font-weight:500}
 .tip .tip-sep{height:1px;background:linear-gradient(90deg,transparent,#5c4d2c,transparent);margin:8px 0}
 .tip .tip-mod{font-size:12.5px;color:#8d8dfa;line-height:1.45;white-space:pre-line}
 .tip .tip-mod + .tip-mod{margin-top:4px}
+.tip .tip-grant img{width:22px;height:22px;vertical-align:-6px;margin-right:5px;border-radius:3px}
+.tip .tip-grant .sk{color:#4ec5bc}
+/* skill gem card, laid out like the gem popups on poe2db */
+.tip-card.skill{border-color:#2f6e69}
+.tip-card.skill .tip-head{display:flex;align-items:center;gap:9px;text-align:left;background:linear-gradient(180deg,#10211f,#060c0b);border-bottom-color:#2f6e69}
+.tip-card.skill .tip-head img{width:38px;height:38px;flex:none;border-radius:4px;box-shadow:0 0 0 1px rgba(78,197,188,.35)}
+.tip-card.skill .sk-name{color:#4ec5bc;font-size:15px;line-height:1.15}
+.tip-card.skill .sk-type{font-family:var(--font-body);font-weight:400;font-size:11.5px;color:#a79d88;letter-spacing:0;margin-top:1px}
+.tip .tip-desc{font-size:12px;color:#9fc9c4;line-height:1.45;white-space:pre-line}
+.tip .tip-tab{font-family:var(--font-head);font-weight:700;font-size:12.5px;color:#e8dcc0;text-align:center;letter-spacing:.03em;
+  margin:10px -12px 8px;padding:4px 12px;background:linear-gradient(90deg,transparent,#1a2826 20%,#1a2826 80%,transparent);
+  border-top:1px solid rgba(47,110,105,.6);border-bottom:1px solid rgba(47,110,105,.6)}
+.tip .tip-qh{font-size:12px;color:#d8d3c8;margin-top:6px}
+.tip .tip-mod .v,.tip .tip-desc .v{color:#fff}
+.tip .tip-foot{font-size:11.5px;color:#8a8170;font-style:italic;line-height:1.4}
 .tree-hint{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
 /* ---- spin controls ---- */
 .controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -368,6 +387,21 @@ function loadGame(id){
     document.head.appendChild(sc);
   });
 }
+// The skills some ascendancy nodes grant come in one file per language (data/poe2-skills/<lang>.js),
+// fetched the first time a tree in that language needs them. Each file registers itself in window.SKILLS.
+const skillLoads = {};
+function loadSkills(gid, lg){
+  const key = gid + ":" + lg;
+  if(!skillLoads[key]) skillLoads[key] = new Promise((res, rej)=>{
+    const sc = document.createElement("script");
+    sc.src = `data/${gid}-skills/${lg}.js`;
+    sc.onload = ()=>res(window.SKILLS[key]);
+    sc.onerror = ()=>{ delete skillLoads[key]; sc.remove(); rej(new Error("cannot load "+sc.src)); };
+    document.head.appendChild(sc);
+  });
+  return skillLoads[key];
+}
+function skillOf(id){ const tab = window.SKILLS && window.SKILLS[G().id + ":" + lang]; return tab && tab[id]; }
 
 // Sector colours per character class, both games.
 const BASE_COLORS = {
@@ -1095,6 +1129,7 @@ function renderTree(c){
   const wrap = $("#treeWrap"), tip = $("#tip");
   const old = wrap.querySelector("svg"); if(old) old.remove();
   hideTip();
+  if(tree.t.some(function(x){ return x.s; })) loadSkills(G().id, lang).catch(function(){});
 
   const vx=tree.vb[0], vy=tree.vb[1], vw=tree.vb[2], vh=tree.vb[3];
   const svg = el("svg", {viewBox: vx+" "+vy+" "+vw+" "+vh});
@@ -1133,33 +1168,99 @@ function hideTip(){
   $("#tip").classList.remove("on");
   document.querySelectorAll("#treeWrap g.nd.on").forEach(function(g){ g.classList.remove("on"); });
 }
+function div(cls, text){ const d=document.createElement("div"); d.className=cls; if(text!=null) d.textContent=text; return d; }
+// Skill text marks its values with \u0001 … \u0002; they are drawn brighter, as in the game.
+function valued(cls, text){
+  const d = div(cls);
+  text.split(/(\u0001[^\u0002]*\u0002)/).forEach(function(part){
+    if(!part) return;
+    if(part.charAt(0) === "\u0001"){ const s=document.createElement("span"); s.className="v"; s.textContent=part.slice(1,-1); d.appendChild(s); }
+    else d.appendChild(document.createTextNode(part));
+  });
+  return d;
+}
+function skillCard(sk){
+  const card = div("tip-card skill");
+  const head = div("tip-head");
+  const ic = document.createElement("img"); ic.src = assetUrl("skills", sk.i); ic.alt = "";
+  const nm = div(""); nm.append(div("sk-name", sk.n), div("sk-type", sk.tl));
+  head.append(ic, nm);
+  const body = div("tip-body");
+  const CLS = {p:"tip-prop", d:"tip-desc", m:"tip-mod", qm:"tip-mod", qh:"tip-qh", t:"tip-tab", f:"tip-foot"};
+  sk.r.forEach(function(r){ body.appendChild(r[0] === "-" ? div("tip-sep") : valued(CLS[r[0]], r[1])); });
+  card.append(head, body);
+  return card;
+}
 function showTip(grp, hit, txt, c){
   hideTip(); grp.classList.add("on");
   const tip = $("#tip");
   tip.innerHTML = "";
-  const head=document.createElement("div"); head.className="tip-head"; head.textContent=pick(txt.n); tip.appendChild(head);
-  const body=document.createElement("div"); body.className="tip-body";
-  const p1=document.createElement("div"); p1.className="tip-prop";
-  p1.textContent = t("ascendancy_short")+": "; const b1=document.createElement("b"); b1.textContent=nameOf(c.en); p1.appendChild(b1);
-  const p2=document.createElement("div"); p2.className="tip-prop";
-  p2.textContent = t("character")+": "; const b2=document.createElement("b"); b2.textContent=nameOf(c.base); p2.appendChild(b2);
+  // park it stacked at the left edge of the screen while it fills, so a card never pokes past the right
+  // edge for a moment — a phone browser answers that by zooming out and jumping the scroll
+  tip.classList.add("col");
+  tip.style.left = Math.round(8 - $("#treeWrap").getBoundingClientRect().left) + "px";
+  tip.style.top = "0px";
+  const card = div("tip-card");
+  card.appendChild(div("tip-head", pick(txt.n)));
+  const body = div("tip-body");
+  const p1 = div("tip-prop", t("ascendancy_short")+": "); const b1=document.createElement("b"); b1.textContent=nameOf(c.en); p1.appendChild(b1);
+  const p2 = div("tip-prop", t("character")+": "); const b2=document.createElement("b"); b2.textContent=nameOf(c.base); p2.appendChild(b2);
   body.append(p1,p2);
   const mods = pick(txt.d) || [];
+  // a node that grants a skill says so on its first line; that line gets the skill icon and name, as on poe2db
+  const sk = txt.s ? skillOf(txt.s) : null;
   if(mods.length){
-    const sep=document.createElement("div"); sep.className="tip-sep"; body.appendChild(sep);
-    mods.forEach(function(m){ const d=document.createElement("div"); d.className="tip-mod"; d.textContent=m; body.appendChild(d); });
+    body.appendChild(div("tip-sep"));
+    mods.forEach(function(m, i){
+      const d = div("tip-mod", m);
+      if(i === 0 && sk){
+        d.textContent = ""; d.classList.add("tip-grant");
+        const ic=document.createElement("img"); ic.src=assetUrl("skills", sk.i); ic.alt="";
+        const at = m.lastIndexOf(sk.n);
+        d.appendChild(ic);
+        if(at < 0) d.appendChild(document.createTextNode(m));
+        else { const s=document.createElement("span"); s.className="sk"; s.textContent=sk.n;
+               d.append(document.createTextNode(m.slice(0, at)), s, document.createTextNode(m.slice(at + sk.n.length))); }
+      }
+      body.appendChild(d);
+    });
   }
-  tip.appendChild(body);
-  // place the tooltip beside the node, kept inside the viewport
+  card.appendChild(body);
+  tip.appendChild(card);
+  if(sk) tip.appendChild(skillCard(sk));
+  else if(txt.s){
+    // the skill file for this language is still on its way; redraw once it lands if the node is still open
+    loadSkills(G().id, lang).then(function(){ if(grp.classList.contains("on") && grp.isConnected && skillOf(txt.s)) showTip(grp, hit, txt, c); }, function(){});
+  }
+  placeTip(tip, hit, !!sk);
+}
+// Places the tooltip beside the node and inside the viewport. With a skill card the two cards sit side
+// by side where the screen has room for both, and stack otherwise.
+function placeTip(tip, hit, pair){
   const wrap=$("#treeWrap"), wb=wrap.getBoundingClientRect(), nb=hit.getBoundingClientRect();
-  tip.classList.add("on");
-  const tw=tip.offsetWidth, th=tip.offsetHeight;
+  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
   const nx=nb.left-wb.left+nb.width/2, ny=nb.top-wb.top+nb.height/2;
-  let left = nx > wb.width/2 ? nx - nb.width/2 - tw - 10 : nx + nb.width/2 + 10;
-  const minLeft = -Math.min(70, Math.max(0, wb.left - 8));
-  const maxLeft = wb.width + Math.min(70, Math.max(0, window.innerWidth - wb.right - 8)) - tw;
-  left = Math.max(minLeft, Math.min(left, Math.max(minLeft, maxLeft)));
-  const top = Math.max(-10, Math.min(ny - th/2, wb.height - th + 10));
+  // measured stacked, so the pair is never laid out wider than a phone screen just to find out it does not fit
+  tip.classList.add("col", "on");
+  let tw=tip.offsetWidth, left;
+  const rowW = [].reduce.call(tip.children, function(s, k){ return s + k.offsetWidth; }, 0) + 6*(tip.children.length - 1);
+  const roomL = nb.left - 18, roomR = vw - nb.right - 18;
+  const preferL = nx > wb.width/2;
+  if(pair && rowW <= Math.max(roomL, roomR)){
+    tip.classList.remove("col"); tw = tip.offsetWidth;
+    const onL = rowW <= (preferL ? roomL : roomR) ? preferL : !preferL;
+    left = onL ? nx - nb.width/2 - tw - 10 : nx + nb.width/2 + 10;
+  } else {
+    left = preferL ? nx - nb.width/2 - tw - 10 : nx + nb.width/2 + 10;
+    const minLeft = -Math.min(70, Math.max(0, wb.left - 8));
+    const maxLeft = wb.width + Math.min(70, Math.max(0, vw - wb.right - 8)) - tw;
+    left = Math.max(minLeft, Math.min(left, Math.max(minLeft, maxLeft)));
+  }
+  const th = tip.offsetHeight;
+  // hug the tree when the tooltip is small enough, and never leave the screen at the top
+  let top = Math.max(-10, Math.min(ny - th/2, wb.height - th + 10));
+  top = Math.min(top, vh - 8 - th - wb.top);
+  top = Math.max(top, 8 - wb.top);
   tip.style.left = Math.round(left)+"px";
   tip.style.top = Math.round(top)+"px";
 }
