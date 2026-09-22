@@ -139,6 +139,11 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .tip .tip-mod + .tip-mod{margin-top:4px}
 .tip .tip-grant img{width:22px;height:22px;vertical-align:-6px;margin-right:5px;border-radius:3px}
 .tip .tip-grant .sk{color:#4ec5bc}
+.tip .tip-grant .kwd{color:#e6cf94;text-decoration:underline dotted rgba(230,207,148,.6);text-underline-offset:3px}
+/* an effect with a description of its own: a plain parchment card, no icon */
+.tip-card.kw{min-width:0;max-width:min(300px,86vw)}
+.tip-card.kw .tip-head{font-size:14px;color:#e6cf94}
+.tip-card.kw .tip-desc{color:#cfc6b1}
 /* skill gem card, laid out like the gem popups on poe2db */
 .tip-card.skill{border-color:#2f6e69}
 .tip-card.skill .tip-head{display:flex;align-items:center;gap:9px;text-align:left;background:linear-gradient(180deg,#10211f,#060c0b);border-bottom-color:#2f6e69}
@@ -1197,6 +1202,15 @@ function skillCard(sk){
   card.append(head, body);
   return card;
 }
+// An effect with a description of its own (Sands of Time, Jade, Combo…), as the keyword popups on poe2db show it.
+function keywordCard(kw){
+  const card = div("tip-card kw");
+  card.appendChild(div("tip-head", kw.n));
+  const body = div("tip-body");
+  kw.r.forEach(function(r){ body.appendChild(valued("tip-desc", r[1])); });
+  card.appendChild(body);
+  return card;
+}
 function showTip(grp, hit, txt, c){
   hideTip(); grp.classList.add("on");
   const tip = $("#tip");
@@ -1213,47 +1227,64 @@ function showTip(grp, hit, txt, c){
   const p2 = div("tip-prop", t("character")+": "); const b2=document.createElement("b"); b2.textContent=nameOf(c.base); p2.appendChild(b2);
   body.append(p1,p2);
   const mods = pick(txt.d) || [];
-  // txt.s lists the skills the node grants as [line, skill]: that line gets the skill icon and name, as on poe2db
-  const grants = (txt.s || []).map(function(g){ return {line:g[0], sk:skillOf(g[1])}; });
+  // txt.s lists what the node grants as [line, key]: a skill, or an effect with a description of its own.
+  // That line gets the skill icon and the name highlighted, as on poe2db, and each gets its own card.
+  const grants = (txt.s || []).map(function(g){ return {line:g[0], key:g[1], sk:skillOf(g[1])}; });
   const ready = grants.every(function(g){ return g.sk; });
   if(mods.length){
     body.appendChild(div("tip-sep"));
     mods.forEach(function(m, i){
       const d = div("tip-mod", m);
-      const g = ready && grants.find(function(g){ return g.line === i; });
-      if(g){
+      const here = ready ? grants.filter(function(g){ return g.line === i; }) : [];
+      if(here.length){
         d.textContent = ""; d.classList.add("tip-grant");
-        const ic=document.createElement("img"); ic.src=assetUrl("skills", g.sk.i); ic.alt="";
-        d.appendChild(ic);
-        const nm = nameIn(m, g.sk.n), at = nm ? m.lastIndexOf(nm) : -1;
-        if(at < 0) d.appendChild(document.createTextNode(m));
-        else { const s=document.createElement("span"); s.className="sk"; s.textContent=nm;
-               d.append(document.createTextNode(m.slice(0, at)), s, document.createTextNode(m.slice(at + nm.length))); }
+        here.forEach(function(g){
+          if(g.sk.k) return;
+          const ic=document.createElement("img"); ic.src=assetUrl("skills", g.sk.i); ic.alt=""; d.appendChild(ic);
+        });
+        // the names found in the line, left to right and never overlapping
+        const spans = here.map(function(g){ const s = spanIn(m, g.sk); return s && {a:s[0], b:s[1], cls:g.sk.k ? "kwd" : "sk"}; })
+          .filter(Boolean).sort(function(x, y){ return x.a - y.a; })
+          .filter(function(s, j, all){ return !all.slice(0, j).some(function(p){ return s.a < p.b; }); });
+        let at = 0;
+        spans.forEach(function(s){
+          const e=document.createElement("span"); e.className=s.cls; e.textContent=m.slice(s.a, s.b);
+          d.append(document.createTextNode(m.slice(at, s.a)), e); at = s.b;
+        });
+        d.appendChild(document.createTextNode(m.slice(at)));
       }
       body.appendChild(d);
     });
   }
   card.appendChild(body);
   tip.appendChild(card);
-  if(ready) grants.forEach(function(g){ tip.appendChild(skillCard(g.sk)); });
-  else {
+  if(ready){
+    const shown = new Set();
+    grants.forEach(function(g){
+      if(shown.has(g.key)) return; shown.add(g.key);
+      tip.appendChild(g.sk.k ? keywordCard(g.sk) : skillCard(g.sk));
+    });
+  } else {
     // the skill file for this language is still on its way; redraw once it lands if the node is still open
     const gid = G().id;
     loadSkills(gid, lang).then(function(){ if(grp.classList.contains("on") && grp.isConnected && G().id === gid && skillOf(txt.s[0][1])) showTip(grp, hit, txt, c); }, function(){});
   }
   placeTip(tip, hit, grants.length > 0 && ready);
 }
-// The skill's name as the node line spells it, or "" when it is not there as is. A support gem is named
-// without its "Support" word in the line ("Supported by Level 30 Ancestral Call", "Поддержка: Зов предков"),
-// and a declined name ("Метки убийцы") is left to the icon rather than half-highlighted.
-function nameIn(line, name){
+// Where the node line names a skill or an effect: [start, end), or null when it is not there as is.
+// A support gem is named without its "Support" word in the line ("Supported by Level 30 Ancestral Call",
+// "Поддержка: Зов предков"), and a declined name ("Метки убийцы") is left to the icon rather than
+// half-highlighted. An effect is found by the words the node text links to it (sk.a: "Lightning Surge"
+// for Elemental Surges).
+function spanIn(line, sk){
   const low = line.toLowerCase();
-  const names = [name, name.replace(/^[^:：]+[:：]\s*/, ""), name.replace(/\s*(Support|サポート)$/, "")];
+  const names = sk.k ? (sk.a || []).concat([sk.n]).sort(function(x, y){ return y.length - x.length; })
+                     : [sk.n, sk.n.replace(/^[^:：]+[:：]\s*/, ""), sk.n.replace(/\s*(Support|サポート)$/, "")];
   for(const n of names){
-    const at = n ? low.lastIndexOf(n.toLowerCase()) : -1;
-    if(at >= 0) return line.substr(at, n.length);
+    const at = n ? (sk.k ? low.indexOf(n.toLowerCase()) : low.lastIndexOf(n.toLowerCase())) : -1;
+    if(at >= 0) return [at, at + n.length];
   }
-  return "";
+  return null;
 }
 // Places the tooltip beside the node and inside the viewport. With skill cards, all the cards sit side by
 // side where the screen has room; failing that, with two or more skills, the node card goes on top and the
