@@ -1,5 +1,11 @@
 # Ascendancy Roulette
 
+<p align="center">
+  <a href="https://weksil.github.io/Poe2ClassSelector/">
+    <img src="https://img.shields.io/badge/%E2%96%B6%20Open%20the%20roulette-weksil.github.io-c8a050?style=for-the-badge&labelColor=1a1410" alt="Open the roulette" height="56">
+  </a>
+</p>
+
 One-page site: a roulette wheel that picks an ascendancy class and generates a character nickname. It covers both games, switched with the toggle in the header — **Path of Exile 2** (23 ascendancies) and **Path of Exile** (21 ascendancies).
 
 - Open `index.html` in a browser, or serve the folder statically, e.g. `python -m http.server`.
